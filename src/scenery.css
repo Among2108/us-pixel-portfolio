@@ -1,0 +1,48 @@
+/* The viewport can grow without changing the period of the current trip's
+   tiles. Rails render enough copies for both halves of the reflected period
+   plus the visible viewport, and translate only inside that period. */
+.world-art .scenery-tile,
+.world-art .biome-tile,
+.world-art .particle-tile {
+  width: var(--scenery-tile-width, 750px);
+}
+
+.world-art :is(.scenery-tile, .biome-tile, .particle-tile):nth-child(even) {
+  transform: scaleX(-1);
+}
+
+.world-art .cloud-strip { transform: translateX(var(--cloud-shift, 0px)); }
+.world-art .far-strip { transform: translateX(var(--far-shift, 0px)); }
+.world-art .near-strip { transform: translateX(var(--near-shift, 0px)); }
+.world-art .woods-strip { transform: translateX(var(--woods-shift, 0px)); }
+.world-art .grass-strip { transform: translateX(var(--grass-shift, 0px)); }
+.world-art .biome-rail.distant { transform: translateX(var(--distant-shift, 0px)); }
+.world-art .biome-rail.foreground { transform: translateX(var(--foreground-shift, 0px)); }
+
+.world-art .sun { transform: translateX(calc(var(--landmark-x, 0px) * .09)); }
+.world-art .rainbow-arc { transform: translateX(calc(var(--landmark-x, 0px) * .1)); }
+.world-art .signal-tower { transform: translateX(calc(var(--landmark-x, 0px) * .55)); }
+
+.world-art .sky-particles { transform: none; }
+.world-art .sky-particles > .particle-strip {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: flex;
+  animation: none;
+  transform: translateX(var(--particle-shift, 0px));
+}
+.particle-tile { position: relative; flex: none; }
+.particle-tile > * { position: absolute; animation: twinkle 5s steps(4, end) var(--delay) infinite; }
+
+/* Each patterned ground layer is one exact repeat, rather than a viewport-wide
+   crop whose edge can break the repeat when the viewport is resized. */
+.world-art .ground { background-size: 100% 5px, 40px 8px, 74px 3px, 118px 4px; }
+
+.game-screen .warp.warp-replay {
+  z-index: 20;
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-art .particle-tile > * { animation: none; }
+}

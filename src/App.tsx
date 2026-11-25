@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Artifact, Warp, WorldArt } from './Biomes'
 import { Dino } from './PixelArt'
-import { beats, clamp, code, contact, entries, portals, worlds, worldStops, profile, skills, training, tofuSystems, portraitSrc, resumeFiles, type Entry, type PortfolioImage } from './story'
+import { beats, clamp, code, contact, entries, portals, worlds, profile, skills, training, tofuSystems, portraitImage, resumeFiles, type Entry, type PortfolioImage } from './story'
+import { usePreparedImage, retryImage, markImageUnavailable } from './imageReadiness'
 import { chapterStops, readingStops, routeLength, useJourney, type ReadingStopId } from './useJourney'
+import { sceneryStyle } from './scenery'
 import resumeUrl from './assets/aslan-resume.txt?url'
 
 const iconPaths = {
@@ -45,25 +47,37 @@ function DetailButton({ onClick, children = 'View details' }: { onClick: () => v
 }
 
 function Screenshot({ image, expanded = false, open, demoUrl }: { image: PortfolioImage; expanded?: boolean; open?: () => void; demoUrl?: string }) {
-  const [failed, setFailed] = useState(false)
-  if (!image.src || failed) return null
-  const picture = <img src={image.src} alt={image.alt} onError={() => setFailed(true)} loading="lazy" />
+  const preview = usePreparedImage(image.preview?.src)
+  const detail = usePreparedImage(expanded ? image.detail?.src : undefined)
+  if (!image.preview || !image.full) return null
+  const target = expanded && image.detail ? image.detail : image.preview
+  const status = expanded && image.detail ? detail : preview
+  const display = status === 'ready' ? target : preview === 'ready' ? image.preview : undefined
+  const picture = display
+    ? <img src={display.src} width={display.width} height={display.height} alt={image.alt} onError={() => markImageUnavailable(display.src)} />
+    : <span className="media-placeholder">{status === 'failed' ? 'Image unavailable' : 'Loading image…'}</span>
   return <figure className={`screenshot${expanded ? ' screenshot-expanded' : ''}`}>
-    {demoUrl || expanded
-      ? <a className="screenshot-frame" href={demoUrl || image.src} target="_blank" rel="noopener noreferrer" aria-label={`${demoUrl ? 'Open project website' : 'Open full-size image'}: ${image.alt}`}>{picture}</a>
-      : <button type="button" className="screenshot-frame" onClick={open} aria-label={`Open details: ${image.alt}`}>{picture}</button>}
-    <figcaption><span>{image.caption}</span><a href={image.src} target="_blank" rel="noopener noreferrer" aria-label={`View image: ${image.alt} (opens in a new tab)`}>View image ↗</a></figcaption>
+    <div className="preview-media" style={{ '--media-ratio': `${image.full.width} / ${image.full.height}` } as CSSProperties}>
+      {demoUrl || expanded
+        ? <a className="screenshot-frame" href={demoUrl || image.full.src} target="_blank" rel="noopener noreferrer" aria-label={`${demoUrl ? 'Open project website' : 'Open full-size image'}: ${image.alt}`}>{picture}</a>
+        : <button type="button" className="screenshot-frame" onClick={open} aria-label={`Open details: ${image.alt}`}>{picture}</button>}
+      {status === 'failed' && <button className="media-retry" onClick={() => retryImage(target.src)} aria-label={`Retry image: ${image.alt}`}>Retry image</button>}
+    </div>
+    <figcaption><span>{image.caption}</span><a href={image.full.src} target="_blank" rel="noopener noreferrer" aria-label={`View image: ${image.alt} (opens in a new tab)`}>View image ↗</a></figcaption>
   </figure>
 }
 
 function ProfileCard({ open }: { open: OpenDetail }) {
-  const [failed, setFailed] = useState(false)
+  const portrait = portraitImage.preview
+  const status = usePreparedImage(portrait?.src)
   return <aside className="story-card profile-card" aria-label="Player profile">
     <CardTop title="PLAYER PROFILE" codeLabel="ID: 01" icon="profile" />
     <div className="card-body">
       <div className="profile-main">
         <div className="portrait actual-portrait">
-          {portraitSrc && !failed ? <img src={portraitSrc} alt="Portrait of Aslan Promjit." onError={() => setFailed(true)} /> : <div className="portrait-placeholder" data-missing-image><span>AP</span><small>Portrait unavailable</small></div>}
+          {portrait && status === 'ready'
+            ? <img src={portrait.src} width={portrait.width} height={portrait.height} alt="Portrait of Aslan Promjit." onError={() => markImageUnavailable(portrait.src)} />
+            : <div className="portrait-placeholder"><span>AP</span>{portrait && status === 'failed' && <button className="media-retry" onClick={() => retryImage(portrait.src)}>Retry portrait</button>}</div>}
         </div>
         <div><h3>{profile.name}</h3><p className="profile-role">{profile.title}</p><p>{profile.subtitle}</p></div>
       </div>
@@ -267,28 +281,40 @@ function PixelDust() {
 }
 
 function ImageGallery({ images, demoUrl }: { images?: readonly PortfolioImage[]; demoUrl?: string }) {
-  const supplied = images?.filter(image => image.src)
+  const supplied = images?.filter(image => image.preview)
   return supplied?.length ? <div className="detail-gallery">{supplied.map(image => <Screenshot key={image.id} image={image} expanded demoUrl={demoUrl} />)}</div> : null
 }
 
 export default function App() {
   const track = useRef<HTMLElement>(null)
   const screen = useRef<HTMLDivElement>(null)
-  const journey = useJourney(track, screen)
-  const { stop, stopIndex, scenePosition, worldTravel, world, portal, phase, cover, nearest, progress, running, direction, playing, autoState, ended, reduced, motion, speed, goTo, next, previous, play, pause, setSpeed, setMotion } = journey
+  const focusStartAfterReplay = useRef(false)
+  const replayButton = useRef<HTMLButtonElement>(null)
   const [detail, setDetail] = useState<{ kind: Detail; id?: string } | null>(null)
+  const journey = useJourney(track, screen, detail !== null)
+  const { stop, stopIndex, world, portal, phase, cover, nearest, progress, running, direction, playing, autoState, ended, reduced, motion, speed, goTo, next, previous, play, pause, pauseForInteraction, setSpeed, setMotion } = journey
+  const { replayState, replaySeconds, replayOpacity, replayAuto, replayNow, stayHere } = journey
+  const returning = replayState === 'returning'
+  const returnPending = !reduced && (replayState === 'counting' || replayState === 'waiting')
+  const canPause = playing || (ended && (replayAuto || returnPending))
+  const playbackLabel = canPause ? 'Pause Auto Run' : 'Play Auto Run'
   const open: OpenDetail = (kind, id) => {
-    pause()
+    pauseForInteraction()
     window.scrollTo({ top: window.scrollY, behavior: 'instant' })
     setDetail({ kind, id })
   }
   const close = useCallback(() => setDetail(null), [])
-  const launch = clamp((scenePosition - portals[0].start) / (portals[0].end - portals[0].start))
-  const baseTravel = Math.max(0, scenePosition - beats[worldStops[world]].at)
-  // Extended reading stops move scenery slowly without running out of repeated landscape tiles.
-  const travel = baseTravel + Math.max(0, worldTravel - baseTravel) * .08 + (world === 0 ? launch ** 2 * .72 : 0)
+  useEffect(() => {
+    if (focusStartAfterReplay.current && !returning && stop.id === 'profile') {
+      screen.current?.querySelector<HTMLButtonElement>('.brand')?.focus({ preventScroll: true })
+      focusStartAfterReplay.current = false
+    }
+  }, [returning, stop.id])
   const jump = portal === 0 ? Math.sin(phase * Math.PI) : portal > 0 ? Math.sin(phase * Math.PI) * .32 : 0
-  const style = { '--travel-x': reduced ? '0px' : `${-travel * 100}cqw`, '--jump': reduced ? 0 : jump, '--facing': direction } as CSSProperties
+  const style = {
+    ...sceneryStyle(journey.sceneryDistance, journey.sceneryTileWidth, journey.sceneryLandmarkDistance, reduced),
+    '--jump': reduced ? 0 : jump, '--facing': direction,
+  } as CSSProperties
   const prop = entries[clamp(nearest - 2, 3, 5)].art
   const detailEntry = detail?.kind === 'entry' ? entries.find(entry => entry.id === detail.id) : undefined
   const detailSystem = detail?.kind === 'system' ? tofuSystems.find(system => system.id === detail.id) : undefined
@@ -327,9 +353,10 @@ export default function App() {
     <main className="scroll-track" ref={track} style={{ '--route-size': routeLength } as CSSProperties}>
       <h1 className="sr-only">Aslan Promjit — Junior Full-Stack Developer</h1>
       <div className={`game-screen stage world-${world}${!motion || reduced ? ' motion-off' : ''}${reduced ? ' reduced-motion' : ''}`} ref={screen} style={style}>
-        <WorldArt world={world} prop={prop} />
+        <WorldArt world={world} prop={prop} tileCount={journey.sceneryTileCount} />
         {portal >= 0 && !reduced && <Warp portal={portal} title={portals[portal].name} opacity={cover} />}
-        <header className="masthead">
+        {replayOpacity !== null && <Warp replay portal={0} title={portals[0].name} opacity={replayOpacity} />}
+        <header className="masthead" inert={returning}>
           <div className="frame-width masthead-inner">
             <button className="brand" onClick={() => goTo('profile')} aria-label="ASLAN.EXE Pixel Runner — back to start">
               <span className="brand-mark"><Icon name="dino" /></span>
@@ -343,13 +370,13 @@ export default function App() {
             <div className="journey-controls" role="group" aria-label="Journey controls">
               <button className="journey-control" onClick={previous} disabled={stopIndex === 0} aria-label="Previous stop" title="Previous stop"><Icon name="previous" /></button>
               <button className="journey-control" onClick={next} disabled={stopIndex === readingStops.length - 1} aria-label="Next stop" title="Next stop"><Icon name="next" /></button>
-              <button data-auto-play className="journey-control auto-play" onClick={playing ? pause : play} disabled={reduced || ended} aria-label={playing ? 'Pause Auto Run' : 'Play Auto Run'} title={playing ? 'Pause Auto Run' : 'Play Auto Run'}><Icon name={playing ? 'pause' : 'play'} /><span>{playing ? 'Pause' : 'Play'}</span></button>
+              <button data-auto-play className="journey-control auto-play" onClick={canPause ? pause : play} disabled={reduced || (ended && !canPause)} aria-label={playbackLabel} title={playbackLabel}><Icon name={canPause ? 'pause' : 'play'} /><span>{canPause ? 'Pause' : 'Play'}</span></button>
               <button className="journey-control" onClick={() => open('settings')} aria-label="Tour settings" title="Tour settings" aria-haspopup="dialog"><Icon name="settings" /></button>
             </div>
           </div>
         </header>
-        <Dino running={!reduced && running} unicorn={world === 1} greeting={stop.id === 'profile'} motion={motion && !reduced} interactive={portal < 0} />
-        <div className="game-shell frame-width">
+        <Dino running={!reduced && running} unicorn={world === 1} greeting={stop.id === 'profile'} motion={motion && !reduced} interactive={portal < 0 && !returning} />
+        <div className="game-shell frame-width" inert={returning}>
           <div className="stage-hud">
             <span className="world-tag"><Icon name={portal >= 0 ? 'star' : worldIcons[world]} /> {portal >= 0 && !reduced ? portals[portal].name : <>WORLD {code(world + 1)} <b>/</b> {worlds[world].theme}</>}</span>
             <div className="stage-progress">
@@ -357,6 +384,12 @@ export default function App() {
               <div className="progress-meter" role="progressbar" aria-label="Story progress" aria-valuenow={Math.round(progress * 100)}><span style={{ width: `${progress * 100}%` }} /></div>
               <span className="tour-status" data-auto-state={autoState}><span role="status">{autoState === 'travelling' ? 'Auto Run' : autoState === 'ended' ? 'Finished' : 'Paused'}</span></span>
             </div>
+            {ended && !returning && <div className="endpoint-return" data-replay-state={replayState}>
+              {returnPending && <span className="return-countdown" style={{ visibility: replaySeconds === null ? 'hidden' : 'visible' }}>Returning to start in <span>{replaySeconds ?? 30}</span>s</span>}
+              {replayState === 'stayed' && <span role="status">Staying at Contact</span>}
+              {returnPending && <button type="button" onClick={() => { stayHere(); replayButton.current?.focus({ preventScroll: true }) }}>Stay here</button>}
+              <button type="button" ref={replayButton} onClick={() => { focusStartAfterReplay.current = true; replayNow() }}>Replay now</button>
+            </div>}
           </div>
           <div className="scene-track">
             <StoryScene key={stop.id} stop={stop} open={open} goTo={goTo} covered={!reduced && cover >= .65} />

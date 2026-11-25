@@ -1,3 +1,6 @@
+import { imageVariants, type ImageVariant } from './imageVariants'
+export type { ImageVariant } from './imageVariants'
+
 export const worlds = [
   { id: 'about', title: 'About Me', theme: 'Space Meadow', tint: '#9bcab5' },
   { id: 'experience', title: 'Work Experience', theme: 'Rainbow Hollow', tint: '#c6b6e8' },
@@ -78,46 +81,37 @@ export function readRoute(position: number) {
 export type PortfolioImage = {
   id: string
   src?: string
+  preview?: ImageVariant
+  detail?: ImageVariant
+  full?: ImageVariant
   caption: string
   alt: string
   expectedFilename: string
   kind?: 'photo' | 'screenshot'
 }
 
-// Supplied assets use their actual encodings. Tofu screenshots are privacy-reviewed
-// copies; optional images are omitted until a suitable portfolio view is supplied.
-const availableImages: Record<string, string> = {
-  aslan: 'aslan.jpg',
-  'tofu-gift-01': 'tofu-gift-01.png',
-  'tofu-delivery-01': 'tofu-delivery-01.png',
-  'tofu-lostfound-01': 'tofu-lostfound-01.png',
-  'tofu-lostcash-01': 'tofu-lostcash-01.png',
-  'tofu-tour-01': 'tofu-tour-01.png',
-  'icare-workplace-01': 'icare-workplace-01.jpg',
-  'tofu-workplace-01': 'tofu-workplace-01.jpg',
-  'generation-bootcamp': 'generation-bootcamp.jpg',
-  'pick-us-01': 'pick-us-01.png',
-  'deck-forge-01': 'deck-forge-01.png',
-  'maipaws-01': 'maipaws-01.png',
-}
 const availableResumes: Record<string, string> = {
   'resume-en': 'Aslan_Promjit_Resume_EN.pdf',
   'resume-th': 'Aslan_Promjit_Resume_TH.pdf',
 }
 
 function image(id: string, caption: string, alt: string, kind: PortfolioImage['kind'] = 'screenshot'): PortfolioImage {
-  const filename = availableImages[id]
+  const variants = imageVariants[id]
   return {
     id,
     caption,
     alt,
     kind,
-    expectedFilename: filename ?? `${id}.webp`,
-    src: filename ? `/images/${filename}` : undefined,
+    expectedFilename: variants?.full.src.split('/').pop() ?? `${id}.webp`,
+    src: variants?.preview.src,
+    preview: variants?.preview,
+    detail: variants?.detail,
+    full: variants?.full,
   }
 }
 
-export const portraitSrc = availableImages.aslan ? `/images/${availableImages.aslan}` : undefined
+export const portraitImage = image('aslan', 'Portrait of Aslan Promjit.', 'Portrait of Aslan Promjit.', 'photo')
+export const portraitSrc = portraitImage.preview?.src
 export const resumeFiles = [
   { id: 'resume-en', label: 'Download Résumé — English', expectedFilename: 'Aslan_Promjit_Resume_EN.pdf' },
   { id: 'resume-th', label: 'ดาวน์โหลดเรซูเม่ — ภาษาไทย', expectedFilename: 'Aslan_Promjit_Resume_TH.pdf' },
@@ -312,3 +306,15 @@ export const training = {
   detail: ['The bootcamp strengthened my problem-solving, communication, and adaptability, and helped me connect technical learning with practical team development.'],
   images: [image('generation-bootcamp', 'A group activity at the Generation Thailand bootcamp.', 'Bootcamp participants in blue Generation Thailand shirts smile as a seated teammate holds a crumpled paper ball.', 'photo')],
 } as const
+
+// Only variants rendered by journey cards are required before the journey begins.
+// Details, full-size originals, PDFs and optional missing images load separately.
+const journeyImages = [
+  portraitImage,
+  ...entries.flatMap(entry => entry.images?.slice(0, 1) ?? []),
+  ...tofuSystems.flatMap(system => system.images.slice(0, 1)),
+  ...training.images.slice(0, 1),
+]
+export const journeyImageManifest: readonly ImageVariant[] = [
+  ...new Map(journeyImages.flatMap(image => image.preview ? [[image.preview.src, image.preview] as const] : [])).values(),
+]

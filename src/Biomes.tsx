@@ -1,22 +1,24 @@
 import { memo, type CSSProperties, type ReactNode } from 'react'
 import { Landscape } from './PixelArt'
+import './scenery.css'
 
 const sparkle = 'M5 0h2v4h4v2H7v4H5V6H1V4h4Z'
 
-function SkyParticles({ world }: { world: number }) {
-  return <div className="sky-particles">
-    {Array.from({ length: world === 3 ? 44 : 29 }, (_, index) => {
+function SkyParticles({ world, tileCount }: { world: number; tileCount: number }) {
+  const particles = Array.from({ length: world === 3 ? 44 : 29 }, (_, index) => {
       const style = { left: `${(index * 43 + 11) % 98}%`, top: `${(index * 29 + 11) % 86}%`, '--delay': `${-(index % 9) * .63}s` } as CSSProperties
       return index % 6 === 0
         ? <svg className="sparkle" key={index} style={style} viewBox="0 0 12 10"><path d={sparkle} fill="currentColor" /></svg>
         : <i key={index} style={style} />
-    })}
-  </div>
+    })
+  return <div className="sky-particles"><div className="particle-strip">
+    {Array.from({ length: tileCount }, (_, index) => <div className="particle-tile" key={index}>{particles}</div>)}
+  </div></div>
 }
 
-function Rail({ layer, children }: { layer: string; children: ReactNode }) {
+function Rail({ layer, tileCount, children }: { layer: string; tileCount: number; children: ReactNode }) {
   return <div className={`biome-rail ${layer}`}>
-    {[0, 1, 2].map((index) => <div className="biome-tile" key={index}>{children}</div>)}
+    {Array.from({ length: tileCount }, (_, index) => <div className="biome-tile" key={index}>{children}</div>)}
   </div>
 }
 
@@ -40,7 +42,7 @@ function Crystal({ x, h, hue }: { x: number; h: number; hue: number }) {
   </svg>
 }
 
-function Hollow() {
+function Hollow({ tileCount }: { tileCount: number }) {
   const arc = 'M14 114V91h10V70h13V53h16V38h23V25h30V16h59v9h30v13h23v15h16v17h13v21h10v23'
   return <>
     <svg className="rainbow-arc" viewBox="0 0 271 126" fill="none" shapeRendering="crispEdges">
@@ -50,14 +52,14 @@ function Hollow() {
       <path d={arc} stroke="#a5d7df" strokeWidth="6" transform="translate(27 21) scale(.802 .85)" />
       <path d={arc} stroke="#c5abe9" strokeWidth="6" transform="translate(36 28) scale(.736 .8)" />
     </svg>
-    <Rail layer="distant">
+    <Rail layer="distant" tileCount={tileCount}>
       <svg className="biome-range" viewBox="0 0 500 184" preserveAspectRatio="none" shapeRendering="crispEdges">
         <path fill="#d0c1e8" d="M0 136h27v-18h16V94h17V73h15v21h14v22h23v20h26v-26h23V91h18V58h16V43h20V23h14v20h17v26h16v24h23v30h29v-16h23V83h23V59h39v17h26v19h28v28h37v13h20v48H0Z" />
         <path fill="#b9afd8" d="M0 158h35v-11h53v10h49v-15h60v14h54v-31h34v-13h37v16h29v17h38v-12h46v19h65v32H0Z" />
         <path fill="#d8ceeb" d="M214 23h15v20h17v26h16v24h17v21h-33V85h-14V59h-18Z" />
       </svg>
     </Rail>
-    <Rail layer="foreground">
+    <Rail layer="foreground" tileCount={tileCount}>
       <Crystal x={2} h={119} hue={0} /><Crystal x={12} h={64} hue={2} />
       <Crystal x={26} h={101} hue={1} /><Crystal x={45} h={71} hue={2} />
       <Crystal x={65} h={134} hue={0} /><Crystal x={72} h={63} hue={1} />
@@ -108,16 +110,16 @@ export function Artifact({ name }: { name: string }) {
   </svg>
 }
 
-function Sandbox({ prop }: { prop: string }) {
+function Sandbox({ prop, tileCount }: { prop: string; tileCount: number }) {
   return <>
-    <Rail layer="distant">
+    <Rail layer="distant" tileCount={tileCount}>
       <svg className="biome-range" viewBox="0 0 500 184" preserveAspectRatio="none" shapeRendering="crispEdges">
         <path fill="#e9c8a5" d="M0 142h38v-32h31V93h45v19h22v22h39v-26h20V79h17V66h62v22h14v23h25v27h20v-17h34v-24h49v23h40v22h44v42H0Z" />
         <path fill="#efdab9" d="M74 101h35v41H74ZM211 73h58v70h-58ZM383 104h38v38h-38Z" />
         <path fill="#d8ac83" d="M0 160h33v-11h68v11h37v-16h79v8h65v-13h54v14h67v-10h49v7h48v34H0Z" />
       </svg>
     </Rail>
-    <Rail layer="foreground">
+    <Rail layer="foreground" tileCount={tileCount}>
       {[5, 30, 67, 88].map((x, index) => <svg key={x} className={`sandbox-crate crate-${index}`} style={{ left: `${x}%` }} viewBox="0 0 49 54" shapeRendering="crispEdges">
         <path fill="#c4926e" d="M6 18h35v33H6Z" /><path fill="#956848" d={cratePaths} fillRule="evenodd" />
         <path fill="#b8855e" d="M6 43h5v-5h6v-5h6v-5h6v-5h11v5h-7v5h-6v5h-6v5h-6v6H6Z" />
@@ -139,9 +141,9 @@ function SignalTower() {
   </svg>
 }
 
-function Signal() {
+function Signal({ tileCount }: { tileCount: number }) {
   return <>
-    <Rail layer="distant">
+    <Rail layer="distant" tileCount={tileCount}>
       <svg className="biome-range" viewBox="0 0 500 184" preserveAspectRatio="none" shapeRendering="crispEdges">
         <path fill="#294c47" d="M0 124h42V96h26v20h23v25h44v-31h26V81h46v31h16v29h49v-32h20v-9h41v24h31V90h28v16h25v29h25v-14h31v16h27v47H0Z" />
         <path fill="#39645a" d="M0 153h40v-9h52v14h47v-11h55v-13h28v13h39v7h53v-7h39v-12h38v18h40v-8h69v39H0Z" />
@@ -152,16 +154,16 @@ function Signal() {
   </>
 }
 
-export const WorldArt = memo(function WorldArt({ world, prop }: { world: number; prop: string }) {
+export const WorldArt = memo(function WorldArt({ world, prop, tileCount = 4 }: { world: number; prop: string; tileCount?: number }) {
   return <div className="world-art" aria-hidden="true">
-    {world === 0 ? <Landscape /> : world === 1 ? <Hollow /> : world === 2 ? <Sandbox prop={prop} /> : <Signal />}
-    <SkyParticles world={world} />
+    {world === 0 ? <Landscape tileCount={tileCount} /> : world === 1 ? <Hollow tileCount={tileCount} /> : world === 2 ? <Sandbox prop={prop} tileCount={tileCount} /> : <Signal tileCount={tileCount} />}
+    <SkyParticles world={world} tileCount={tileCount} />
     <div className="ground" />
   </div>
 })
 
-export function Warp({ portal, title, opacity }: { portal: number; title: string; opacity: number }) {
-  return <div className={`warp warp-${portal}`} style={{ opacity }} aria-hidden="true">
+export function Warp({ portal, title, opacity, replay = false }: { portal: number; title: string; opacity: number; replay?: boolean }) {
+  return <div className={`warp warp-${portal}${replay ? ' warp-replay' : ''}`} style={{ opacity }} aria-hidden="true">
     <div className="warp-core" />
     <div className="warp-trails">
       {Array.from({ length: 26 }, (_, index) => <i key={index} style={{

@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Press+Start+2P&display=swap');
 @import 'tailwindcss';
 
 @layer base {
@@ -22,6 +21,23 @@
 }
 
 .scroll-track { min-height: calc(100dvh + var(--route-size) * clamp(330px, 41vw, 620px)); }
+.startup { min-height: 100dvh; display: grid; place-items: center; background: var(--cream); }
+.startup-art { position: relative; width: min(300px, 76vw); color: var(--green); }
+.startup-art h1 { text-align: center; font: 700 clamp(20px, 5vw, 30px)/1.4 var(--pixel); }
+.startup-art h1 span { color: var(--sage); }
+.startup-track { --runner: 56px; height: 70px; position: relative; border-bottom: 3px solid var(--green); }
+.startup-track::after { content: ''; position: absolute; top: calc(100% + 4px); inset-inline: 0; height: 3px; background: repeating-linear-gradient(90deg, var(--mint) 0 10px, transparent 10px 16px); }
+.startup-lane { position: absolute; bottom: 0; left: 0; right: calc(var(--runner) + 21px); }
+.startup-lane .dino-avatar { width: var(--runner); left: calc(100% * var(--readiness)); bottom: 0; border: 0; padding: 0; background: none; line-height: 0; pointer-events: none; transition: left 120ms linear; }
+.startup-lane .dino-hello, .startup-lane .dino-shadow { display: none; }
+.startup-lane .dino-sprite { translate: none; }
+.finish-flag { position: absolute; right: 17px; bottom: 0; width: 3px; height: 39px; background: var(--green); }
+.finish-flag::before { content: ''; position: absolute; left: 3px; width: 17px; height: 13px; border: 1px solid var(--green); background: repeating-conic-gradient(var(--green) 0 25%, var(--mint) 0 50%) 0 0 / 8px 8px; }
+.startup-skip { position: absolute; top: calc(100% + 20px); right: 0; min-height: 32px; padding: 4px 10px; border: 1px solid var(--sage); color: var(--green); background: var(--cream); font: 700 12px var(--sans); }
+@media (prefers-reduced-motion: reduce) {
+  .startup-lane .dino-avatar { left: 0; transition: none; }
+  .startup-lane .dino-avatar * { animation: none !important; }
+}
 .game-screen { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; }
 .frame-width { width: min(1312px, calc(100% - clamp(44px, 10vw, 144px))); margin-inline: auto; }
 
@@ -479,6 +495,21 @@
 }
 .game-screen .stage-hud > * { min-width: 0; white-space: normal; }
 .game-screen .stage-progress { white-space: nowrap; flex: none; }
+.stage-hud .stage-progress { order: 2; }
+.endpoint-return {
+  order: 1; display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap;
+  pointer-events: auto; padding: 3px 6px; border: 1px solid #829e8b; background: var(--cream); color: var(--green);
+  font: 600 12px/1.2 var(--sans); letter-spacing: 0; font-variant-numeric: tabular-nums;
+}
+.endpoint-return button { min-height: 30px; padding: 3px 7px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+.endpoint-return button:last-child { background: var(--mint); }
+.return-countdown { white-space: nowrap; }
+.return-countdown > span { display: inline-block; min-width: 2ch; text-align: right; }
+@media (max-width: 760px) {
+  .stage-hud:has(.endpoint-return) { display: grid; grid-template-columns: minmax(0,1fr) auto; row-gap: 4px; }
+  .stage-hud:has(.endpoint-return) .world-tag { max-width: 100%; justify-self: start; }
+  .endpoint-return { order: 3; grid-column: 1/-1; justify-self: end; gap: 3px; }
+}
 .game-screen .world-tag { max-width: 70%; }
 .game-screen .scene-track { position: relative; inset: auto; min-height: 0; min-width: 0; z-index: 6; container: reading / size; }
 .game-screen .story-scene {
@@ -535,6 +566,9 @@
 .skill-preview .skill-tags, .full-skills .skill-tags { margin-top: 5px; }
 .skill-tags li { font: 700 11px/1.3 var(--sans); overflow-wrap: anywhere; }
 .screenshot { min-width: 0; margin: 0; display: grid; gap: 5px; }
+.preview-media, .actual-portrait { min-width: 0; position: relative; }
+.media-placeholder { color: var(--sage); font: 600 12px var(--sans); }
+.media-retry { position: absolute; right: 3px; bottom: 3px; border: 1px solid var(--green); background: var(--cream); color: var(--green); padding: 4px 6px; font: 700 11px var(--sans); }
 .screenshot-frame {
   position: relative;
   width: 100%; aspect-ratio: 16/9; max-height: clamp(90px, 24dvh, 220px);
@@ -562,7 +596,7 @@
 .game-screen:has(.warp) .dino-avatar { z-index: 9; }
 .game-screen .warp { z-index: 8; }
 .game-screen .cloud { animation-duration: 6s; }
-.game-screen .sky-particles > * { animation-duration: 6s; }
+.game-screen .particle-tile > * { animation-duration: 6s; }
 .game-screen .entry-art .artifact { animation: none; }
 .game-screen.motion-off .world-art * { animation: none !important; }
 .game-screen.reduced-motion .world-art *, .game-screen.reduced-motion .dino-sprite, .game-screen.reduced-motion .dino-sprite * { animation: none !important; }
@@ -619,8 +653,7 @@
 .dialog-role { color: #416956; font-weight: 800; }
 .dialog-content a:not(.detail-button):not(.screenshot-frame) { text-decoration: underline; }
 .detail-gallery { display: grid; gap: 20px; }
-.screenshot-expanded .screenshot-frame { aspect-ratio: auto; max-height: none; min-height: 96px; }
-.screenshot-expanded .screenshot-frame img { position: static; width: 100%; height: auto; max-height: min(58dvh, 680px); object-fit: contain; }
+.screenshot-expanded .screenshot-frame { aspect-ratio: var(--media-ratio); max-height: calc(min(58dvh, 680px) + 2px); }
 .full-skills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .full-skills section { border: 1px solid #c7d8c8; padding: 10px; min-width: 0; }
 .system-list { list-style: disc; padding-left: 24px; }
@@ -754,6 +787,10 @@
 @container reading (max-width: 740px) and (min-height: 396px) and (max-height: 600px) {
   .reading-panel .screenshot-frame { max-height: min(128px, 21cqh); }
 }
+@container reading (max-width: 320px) and (max-height: 320px) {
+  .reading-panel :is(.system-card, .project-card) .screenshot { grid-template-columns: minmax(0, 35%) minmax(0, 1fr); }
+  .reading-panel .system-card .card-body { padding-block: 5px; }
+}
 @container reading (max-height: 235px) {
   .reading-intro .intro-copy, .reading-panel .entry-copy, .reading-panel .skill-preview,
   .reading-panel .contact-actions, .reading-panel .resume-downloads, .reading-panel .screenshot { display: none; }
@@ -765,6 +802,7 @@
 }
 @media (max-height: 455px) {
   .game-screen.stage { --character-size: clamp(40px, 12dvh, 56px); --jump-clearance: 26px; }
+  .game-screen:has(.endpoint-return) .contact-card .card-body { padding-block: 5px; }
 }
 @media (max-width: 380px) {
   .masthead .journey-controls { --control-size: 34px; grid-template-columns: var(--control-size) var(--control-size) 55px var(--control-size); }

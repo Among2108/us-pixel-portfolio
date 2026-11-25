@@ -62,15 +62,15 @@ function Brush({ left, width }: { left: string; width: number }) {
   )
 }
 
-function Strip({ name, children }: { name: string; children: React.ReactNode }) {
+function Strip({ name, tileCount, children }: { name: string; tileCount: number; children: React.ReactNode }) {
   return (
     <div className={`scenery-strip ${name}`}>
-      {Array.from({ length: 5 }, (_, index) => <div className="scenery-tile" key={index}>{children}</div>)}
+      {Array.from({ length: tileCount }, (_, index) => <div className="scenery-tile" key={index}>{children}</div>)}
     </div>
   )
 }
 
-export const Landscape = memo(function Landscape() {
+export const Landscape = memo(function Landscape({ tileCount = 4 }: { tileCount?: number }) {
   return (
     <div className="landscape" aria-hidden="true">
       <svg className="sun" viewBox="0 0 34 34" shapeRendering="crispEdges">
@@ -78,28 +78,28 @@ export const Landscape = memo(function Landscape() {
         <path fill="#e6ead0" d="M7 8h7v2h3v4h-3v2H8v-2H5v-4h2ZM19 22h5v3h3v4h-8v-2h-3v-3h3ZM24 9h4v4h-4Z" />
         <path fill="#efefd6" d="M2 20h30v2H2ZM5 25h24v2H5ZM10 30h14v1H10Z" />
       </svg>
-      <Strip name="cloud-strip">
+      <Strip name="cloud-strip" tileCount={tileCount}>
         <Cloud left="33%" top="16%" width={114} light />
         <Cloud left="60%" top="25%" width={143} />
         <Cloud left="84%" top="18%" width={149} />
         <Cloud left="17%" top="55%" width={74} light />
         <Cloud left="97%" top="17%" width={76} light />
       </Strip>
-      <Strip name="far-strip">
+      <Strip name="far-strip" tileCount={tileCount}>
         <svg className="ridge" viewBox="0 0 1320 304" preserveAspectRatio="none" shapeRendering="crispEdges">
           <path fill="#cce3d4" d={far} />
           <path fill="#c1ddce" d={farShade} />
           <path fill="#ebf2e5" d="M824 72h8V64h8v-8h8v-8h8v-8h8v8h8v8h8v8h8v8h8v8h-24v-8h-16v8h-16v8h-24v-8h8Z" />
         </svg>
       </Strip>
-      <Strip name="near-strip">
+      <Strip name="near-strip" tileCount={tileCount}>
         <svg className="ridge" viewBox="0 0 1320 304" preserveAspectRatio="none" shapeRendering="crispEdges">
           <path fill="#accfb9" d={near} />
           <path fill="#9cc5ad" d={nearShade} />
           <path fill="#86b295" d={foothills} />
         </svg>
       </Strip>
-      <Strip name="woods-strip">
+      <Strip name="woods-strip" tileCount={tileCount}>
         <Pine left="1%" height={105} />
         <Pine left="5.5%" height={67} faded />
         <Pine left="12%" height={46} faded />
@@ -117,7 +117,7 @@ export const Landscape = memo(function Landscape() {
         <Brush left="78%" width={62} />
         <Brush left="89%" width={83} />
       </Strip>
-      <Strip name="grass-strip">
+      <Strip name="grass-strip" tileCount={tileCount}>
         {[7, 25, 31, 46, 61, 67, 84, 93].map((left) => (
           <svg className="grass" key={left} style={{ left: `${left}%` }} viewBox="0 0 23 8" width="23" height="8" shapeRendering="crispEdges">
             <path fill="#507b65" d="M0 8V5h3v3h4V3h3v5h4V0h3v8h3V5h3v3Z" />
