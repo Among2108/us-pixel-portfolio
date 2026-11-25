@@ -60,10 +60,12 @@ export function readJourney(travelPosition: number) {
   }
 }
 
-const speedOptions: Record<Speed, { travel: number; dwell: number }> = {
-  Slow: { travel: .24, dwell: 12000 },
-  Normal: { travel: .38, dwell: 10000 },
-  Fast: { travel: .58, dwell: 8000 },
+// Continuous speeds leave each card visible for several seconds without
+// inserting a stop or changing the dinosaur's gait at chapter boundaries.
+const speedOptions: Record<Speed, number> = {
+  Slow: .12,
+  Normal: .18,
+  Fast: .26,
 }
 
 const motionPreference = 'aslan-ambient-motion'
@@ -74,10 +76,8 @@ const settleMinimumTime = 220
 
 type ActiveTour =
   | { phase: 'settling'; startedAt: number; stableSince: number; lastY: number }
-  | { phase: 'reading'; index: number; until: number; seconds: number; lastY: number }
   | {
     phase: 'travelling'
-    target: number
     lastTime: number
     fraction: number
     lastY: number
@@ -86,7 +86,6 @@ type ActiveTour =
 
 function followsCommand(tour: ActiveTour, y: number) {
   if (tour.phase === 'settling') return true
-  if (tour.phase === 'reading') return Math.abs(y - tour.lastY) <= scrollTolerance
   // Native compositor scroll acknowledgement may lag a request. Accept the
   // interval from the last observed point to the most recent requested point.
   return y >= tour.lastY - scrollTolerance && y <= tour.requestedY + scrollTolerance
@@ -118,8 +117,7 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
   const [travelPosition, setTravelPosition] = useState(0)
   const [running, setRunning] = useState(false)
   const [direction, setDirection] = useState<1 | -1>(1)
-  const [autoMode, setAutoMode] = useState<'paused' | 'travelling' | 'reading'>('paused')
-  const [readingSeconds, setReadingSeconds] = useState(0)
+  const [autoMode, setAutoMode] = useState<'paused' | 'travelling'>('paused')
   const [ended, setEnded] = useState(false)
   const [speed, setSpeed] = useState<Speed>('Slow')
   const [ambientMotion, setMotion] = useState(preferredAmbientMotion)
@@ -144,7 +142,6 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
     cancelAnimationFrame(autoFrame.current)
     autoFrame.current = 0
     setAutoMode('paused')
-    setReadingSeconds(0)
     setRunning(false)
   }, [])
 
@@ -192,7 +189,7 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
       if (y === lastY) return
       setDirection(y > lastY ? 1 : -1)
       lastY = y
-      if (prefersReducedMotion() || runtime.current?.phase === 'reading') {
+      if (prefersReducedMotion()) {
         clearTimeout(idleTimer)
         setRunning(false)
         return
@@ -296,40 +293,23 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
     if (runtime.current || prefersReducedMotion() || document.hidden || document.querySelector(blockingOverlay)) return
     const layout = geometry()
     if (!layout) return
-    const last = readingStops.length - 1
     const pixelsPerUnit = layout.range / routeLength
-    const pixelAt = (stopIndex: number) => Math.round(layout.top + readingStops[stopIndex].at * pixelsPerUnit)
-    if (window.scrollY >= pixelAt(last) - 1) return
+    const destinationY = Math.round(layout.top + layout.range)
+    if (window.scrollY >= destinationY - 1) return
 
-    const beginTravel = (target: number, y: number, now: number) => {
-      runtime.current = { phase: 'travelling', target, lastTime: now, fraction: 0, lastY: y, requestedY: y }
-      setAutoMode('travelling')
-      setReadingSeconds(0)
-    }
-
-    const beginReading = (index: number, y: number, now: number) => {
-      if (index === last) {
-        setEnded(true)
-        pause()
-        return
-      }
-      const dwell = speedOptions[speedRef.current].dwell
-      const seconds = Math.ceil(dwell / 1000)
-      runtime.current = { phase: 'reading', index, until: now + dwell, seconds, lastY: y }
-      setAutoMode('reading')
-      setReadingSeconds(seconds)
-      setRunning(false)
+    const beginTravel = (y: number, now: number) => {
+      runtime.current = { phase: 'travelling', lastTime: now, fraction: 0, lastY: y, requestedY: y }
+      setRunning(true)
     }
 
     // Cancelling native smooth travel can leave a queued compositor scroll
     // event after the cancellation. Settle before applying the interruption
-    // guard and choose the first stop from the actual settled scroll position.
+    // guard and continue from the actual settled scroll position.
     const startedAt = performance.now()
     window.scrollTo({ top: window.scrollY, behavior: 'instant' })
     runtime.current = { phase: 'settling', startedAt, stableSince: startedAt, lastY: window.scrollY }
     const runGeneration = ++generation.current
     setAutoMode('travelling')
-    setReadingSeconds(0)
 
     const step = (now: number) => {
       const tour = runtime.current
@@ -351,45 +331,36 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
           window.scrollTo({ top: y, behavior: 'instant' })
         }
         if (now - tour.stableSince >= settleQuietTime && now - tour.startedAt >= settleMinimumTime) {
-          const target = readingStops.findIndex((_, index) => pixelAt(index) > y + 1)
-          if (target < 0) {
+          if (y >= destinationY - 1) {
             setEnded(true)
             pause()
             return
           }
-          if (target > 0 && Math.abs(pixelAt(target - 1) - y) <= scrollTolerance) {
-            beginReading(target - 1, y, now)
-          } else {
-            beginTravel(target, y, now)
-          }
+          beginTravel(y, now)
         }
-      } else if (tour.phase === 'reading') {
-        const remaining = Math.max(0, Math.ceil((tour.until - now) / 1000))
-        if (remaining !== tour.seconds) {
-          tour.seconds = remaining
-          setReadingSeconds(remaining)
-        }
-        if (now >= tour.until) beginTravel(tour.index + 1, y, now)
       } else {
-        const elapsed = Math.max(0, Math.min(100, now - tour.lastTime))
+        // Keep elapsed-time speed even on low-frame-rate devices. Limit a
+        // longer stall to one second of travel, without retaining catch-up
+        // debt; the visibility guard separately stops background travel.
+        const elapsed = Math.max(0, Math.min(1000, now - tour.lastTime))
         tour.lastTime = now
         tour.lastY = y
-        const settings = speedOptions[speedRef.current]
-        const target = pixelAt(tour.target)
         // Browser zoom can make the exact requested CSS pixel unreachable.
-        if (y >= target - 1) {
-          beginReading(tour.target, y, now)
-        } else {
-          // Accumulate only fractional pixels so high-refresh-rate displays
-          // can move at the same elapsed-time speed as 60 Hz displays.
-          const amount = tour.fraction + elapsed / 1000 * settings.travel * pixelsPerUnit
-          const distance = Math.floor(amount)
-          tour.fraction = amount - distance
-          if (distance > 0) {
-            const destination = Math.min(target, Math.max(y, tour.requestedY) + distance)
-            tour.requestedY = destination
-            window.scrollTo({ top: destination, behavior: 'instant' })
-          }
+        if (y >= destinationY - 1) {
+          setEnded(true)
+          pause()
+          return
+        }
+        // Accumulate only fractional pixels so high-refresh-rate displays
+        // can move at the same elapsed-time speed as 60 Hz displays. Reading
+        // stops remain navigation targets, but never interrupt Auto Run.
+        const amount = tour.fraction + elapsed / 1000 * speedOptions[speedRef.current] * pixelsPerUnit
+        const distance = Math.floor(amount)
+        tour.fraction = amount - distance
+        if (distance > 0) {
+          const destination = Math.min(destinationY, Math.max(y, tour.requestedY) + distance)
+          tour.requestedY = destination
+          window.scrollTo({ top: destination, behavior: 'instant' })
         }
       }
       if (runtime.current && generation.current === runGeneration) autoFrame.current = requestAnimationFrame(step)
@@ -405,14 +376,13 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
 
   return {
     ...readJourney(travelPosition),
-    running: running && !reduced,
+    running: (running || autoMode === 'travelling') && !reduced && !ended,
     direction,
     goTo,
     next,
     previous,
     playing: autoMode !== 'paused',
     autoState: autoMode === 'paused' && ended ? 'ended' as const : autoMode,
-    readingSeconds,
     ended,
     play,
     pause,

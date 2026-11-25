@@ -195,7 +195,7 @@ function Modal({ title, close, motion, children }: { title: string; close: () =>
   const requestClose = () => motion ? setClosing(true) : close()
   useEffect(() => {
     if (!closing) return
-    const timer = window.setTimeout(close, motion ? 130 : 0)
+    const timer = window.setTimeout(close, motion ? 320 : 0)
     return () => window.clearTimeout(timer)
   }, [closing, close, motion])
   useEffect(() => {
@@ -214,6 +214,13 @@ function Modal({ title, close, motion, children }: { title: string; close: () =>
   }, [])
   return <dialog ref={dialog} className="detail-dialog" aria-labelledby="dialog-title" data-transition={motion ? closing ? 'exit' : 'enter' : 'none'}
     onCancel={event => { event.preventDefault(); requestClose() }}
+    onClick={event => {
+      if (event.target !== event.currentTarget) return
+      const bounds = event.currentTarget.getBoundingClientRect()
+      // The materializing surface temporarily has transparent cut-outs. A
+      // click in those gaps is still inside the panel, not on the backdrop.
+      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) requestClose()
+    }}
     onKeyDown={event => {
       if (event.key !== 'Tab') return
       const focusable = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]')]
@@ -227,9 +234,36 @@ function Modal({ title, close, motion, children }: { title: string; close: () =>
         first?.focus()
       }
     }}>
-    <header className="dialog-header"><h2 id="dialog-title">{title}</h2><button className="detail-button" onClick={requestClose}>Close details <span aria-hidden="true">×</span></button></header>
-    <div className="dialog-content">{children}</div>
+    {motion && <PixelDust />}
+    <div className="dialog-surface">
+      <header className="dialog-header"><h2 id="dialog-title">{title}</h2><button className="detail-button" onClick={requestClose}>Close details <span aria-hidden="true">×</span></button></header>
+      <div className="dialog-content">{children}</div>
+    </div>
   </dialog>
+}
+
+// Fixed seeds keep the dust stable through React updates. Every grain has a
+// destination on the panel, so it gathers into the content rather than raining
+// over the page. The layer is decorative and never catches pointer events.
+const dustGrains = Array.from({ length: 84 }, (_, index) => {
+  const column = index % 12
+  const row = Math.floor(index / 12)
+  const seed = (index * 37 + 19) % 101
+  const angle = index * 2.399963
+  const distance = 65 + seed * 1.25
+  return {
+    left: `${(column + .5) / 12 * 100}%`,
+    top: `${(row + .5) / 7 * 100}%`,
+    '--dust-x': `${Math.round(Math.cos(angle) * distance)}px`,
+    '--dust-y': `${Math.round(Math.sin(angle) * distance)}px`,
+    '--dust-size': `${4 + index % 3 * 3}px`,
+    '--dust-delay': `${seed * .7}ms`,
+    '--dust-ink': ['#f8f8ed', '#9bcab5', '#527962', '#d5e7c9'][index % 4],
+  } as CSSProperties
+})
+
+function PixelDust() {
+  return <div className="pixel-dust" aria-hidden="true">{dustGrains.map((style, index) => <i className="pixel-grain" key={index} style={style} />)}</div>
 }
 
 function ImageGallery({ images, demoUrl }: { images?: readonly PortfolioImage[]; demoUrl?: string }) {
@@ -241,7 +275,7 @@ export default function App() {
   const track = useRef<HTMLElement>(null)
   const screen = useRef<HTMLDivElement>(null)
   const journey = useJourney(track, screen)
-  const { stop, stopIndex, scenePosition, worldTravel, world, portal, phase, cover, nearest, progress, running, direction, playing, autoState, readingSeconds, ended, reduced, motion, speed, goTo, next, previous, play, pause, setSpeed, setMotion } = journey
+  const { stop, stopIndex, scenePosition, worldTravel, world, portal, phase, cover, nearest, progress, running, direction, playing, autoState, ended, reduced, motion, speed, goTo, next, previous, play, pause, setSpeed, setMotion } = journey
   const [detail, setDetail] = useState<{ kind: Detail; id?: string } | null>(null)
   const open: OpenDetail = (kind, id) => {
     pause()
@@ -285,7 +319,8 @@ export default function App() {
     modalTitle = 'Tour settings'
     modalContent = <><fieldset className="speed-options"><legend>Auto Run speed</legend>{(['Slow', 'Normal', 'Fast'] as const).map(value => <label key={value}><input type="radio" name="tour-speed" checked={speed === value} onChange={() => setSpeed(value)} /> {value}</label>)}</fieldset>
       <label className="motion-setting"><input type="checkbox" checked={motion && !reduced} disabled={reduced} onChange={event => setMotion(event.target.checked)} /> Motion</label>
-      <p>{reduced ? 'Your reduced-motion preference keeps the world still and Auto Run unavailable.' : 'Motion controls decorative drift. Auto Run pauses at each reading stop and resumes only when you choose Play after an interruption.'}</p></>
+      <p>{reduced ? 'Your reduced-motion preference keeps the world still and Auto Run unavailable.' : 'Auto Run travels continuously through every world. Choose a comfortable speed, or pause whenever you want to read. Scrolling, opening details, or leaving this tab pauses the tour; choose Play to continue.'}</p>
+      {!reduced && <p>Motion controls the mascot’s idle gestures, background drift, and pixel dust transitions.</p>}</>
   }
 
   return (
@@ -301,7 +336,9 @@ export default function App() {
               <span className="brand-wordmark"><strong>ASLAN<span>.EXE</span></strong><small>PIXEL RUNNER</small></span>
             </button>
             <nav className="site-nav" aria-label="Portfolio worlds">
-              {navLabels.map((label, index) => <button key={label} onClick={() => goTo(chapterStops[index])} aria-current={world === index ? 'location' : undefined}>{label}</button>)}
+              {navLabels.map((label, index) => <button className="world-tab" key={label} onClick={() => goTo(chapterStops[index])} aria-current={world === index ? 'location' : undefined} title={worlds[index].theme} style={{ '--nav-tint': worlds[index].tint } as CSSProperties}>
+                <span className="nav-icon"><Icon name={worldIcons[index]} /></span><span className="nav-label">{label}</span>
+              </button>)}
             </nav>
             <div className="journey-controls" role="group" aria-label="Journey controls">
               <button className="journey-control" onClick={previous} disabled={stopIndex === 0} aria-label="Previous stop" title="Previous stop"><Icon name="previous" /></button>
@@ -318,7 +355,7 @@ export default function App() {
             <div className="stage-progress">
               <span className="reading-count" aria-label={`Stop ${stopIndex + 1} of ${readingStops.length}`}>{code(stopIndex + 1)}/{readingStops.length}</span>
               <div className="progress-meter" role="progressbar" aria-label="Story progress" aria-valuenow={Math.round(progress * 100)}><span style={{ width: `${progress * 100}%` }} /></div>
-              <span className="tour-status" data-auto-state={autoState}><span role="status">{autoState === 'reading' ? 'Reading' : autoState === 'travelling' ? 'Travelling' : autoState === 'ended' ? 'Finished' : 'Paused'}</span>{autoState === 'reading' && <span aria-hidden="true"> · {readingSeconds}s</span>}</span>
+              <span className="tour-status" data-auto-state={autoState}><span role="status">{autoState === 'travelling' ? 'Auto Run' : autoState === 'ended' ? 'Finished' : 'Paused'}</span></span>
             </div>
           </div>
           <div className="scene-track">

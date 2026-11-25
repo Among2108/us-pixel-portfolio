@@ -68,6 +68,7 @@ A bilingual shopping-assistance prototype for international customers
 requesting products from Thailand, with customer and admin workflows
 under development and testing.
 Technologies: Next.js, React, TypeScript, Tailwind CSS, PostgreSQL.
+Demo: https://pick-us-v2-pilot-ce0a1f.netlify.app/
 
 DECK FORGE — Prototype · Testing
 Board Game & Trading Card Store Web App
@@ -77,6 +78,7 @@ Payment integration uses Omise Test Mode, with a LINE notification
 prototype.
 Technologies: Next.js, React, TypeScript, Auth.js, Prisma, PostgreSQL,
 Omise, Railway.
+Demo: https://toykan-merchant-review-production.up.railway.app/
 
 MaiPaws — Functional Demo
 Simulated Pet E-commerce Web App
@@ -85,6 +87,7 @@ project with product browsing, shopping-cart, and order workflows.
 Developed through a Git-based collaborative workflow.
 Technologies: React, Vite, Tailwind CSS, Node.js, Express.js, MongoDB,
 REST APIs, JWT.
+Demo: https://jsd-project-group-2.vercel.app/
 
 CONTACT
 

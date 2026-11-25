@@ -142,34 +142,56 @@ export const Dino = memo(function Dino({
   motion?: boolean
   interactive?: boolean
 }) {
-  const [gesture, setGesture] = useState<'idle' | 'greeting' | 'activation'>('idle')
+  type Gesture = 'idle' | 'greeting' | 'wave' | 'wink' | 'hop' | 'curious' | 'activation'
+  const [gesture, setGesture] = useState<Gesture>('idle')
+  const [visible, setVisible] = useState(() => typeof document === 'undefined' || !document.hidden)
   const greeted = useRef(false)
+  const nextGesture = useRef(0)
 
-  const gesturesEnabled = motion && interactive
+  const gesturesEnabled = motion && interactive && visible
+
   useEffect(() => {
-    if (!greeting || !gesturesEnabled || greeted.current) return
-    // A restored scroll position can briefly render the first stop before
-    // journey position is measured. Greet only once it is actually visible.
+    const update = () => setVisible(!document.hidden)
+    document.addEventListener('visibilitychange', update)
+    return () => document.removeEventListener('visibilitychange', update)
+  }, [])
+
+  useEffect(() => {
+    if (!greeting || !gesturesEnabled || running || greeted.current) return
+    // Wait for the initial journey measurement, then give visitors an obvious
+    // welcome instead of a gesture that finishes before the first card is read.
     const timer = window.setTimeout(() => {
       greeted.current = true
       setGesture('greeting')
-    }, 100)
+    }, 450)
     return () => window.clearTimeout(timer)
-  }, [greeting, gesturesEnabled])
+  }, [greeting, gesturesEnabled, running])
+
+  useEffect(() => {
+    if (!gesturesEnabled || running) return
+    const sequence: Gesture[] = ['curious', 'wave', 'hop', 'wink']
+    let timer: number
+    const perform = () => {
+      const next = sequence[nextGesture.current % sequence.length]
+      nextGesture.current += 1
+      setGesture(current => current === 'idle' ? next : current)
+      timer = window.setTimeout(perform, 4300 + (nextGesture.current % 3) * 700)
+    }
+    timer = window.setTimeout(perform, greeted.current ? 3800 : 4400)
+    return () => window.clearTimeout(timer)
+  }, [gesturesEnabled, running])
 
   useEffect(() => {
     if (gesture === 'idle') return
-    const timer = window.setTimeout(() => setGesture('idle'), gesture === 'greeting' ? 950 : 650)
+    const duration = gesture === 'greeting' ? 2100 : gesture === 'curious' ? 1800 : 1250
+    const timer = window.setTimeout(() => setGesture('idle'), duration)
     return () => window.clearTimeout(timer)
   }, [gesture])
 
   useEffect(() => {
-    if (!gesturesEnabled) setGesture('idle')
-  }, [gesturesEnabled])
-
-  useEffect(() => {
-    if (!greeting && gesture === 'greeting') setGesture('idle')
-  }, [gesture, greeting])
+    // Journey movement and portal jumps take precedence over ambient poses.
+    if (!gesturesEnabled || running) setGesture('idle')
+  }, [gesturesEnabled, running])
 
   const characterLabel = unicorn ? 'Rainbow unicorn dinosaur' : 'Green pixel dinosaur wearing a mint bandana'
   return (
@@ -181,9 +203,10 @@ export const Dino = memo(function Dino({
       data-gesture-enabled={gesturesEnabled}
       aria-label={gesturesEnabled ? `${characterLabel}. Activate to wave.` : characterLabel}
       disabled={!gesturesEnabled}
-      onClick={() => { if (gesturesEnabled && gesture === 'idle') setGesture('activation') }}
+      onClick={() => { if (gesturesEnabled && gesture === 'idle') setGesture(running ? 'wave' : 'activation') }}
     >
       <span className="dino-shadow" aria-hidden="true" />
+      <span className="dino-hello" aria-hidden="true">HI!</span>
       <span className="dino-gesture-frame"><svg className="dino-sprite" viewBox="0 0 44 34" shapeRendering="crispEdges" aria-hidden="true">
         <g className="dino-tail">
           <path fill="#203a31" d="M1 15h2v5h3v3h4v1h8v7h-7v-1H7v-2H4v-3H2v-4H1Z" />
@@ -191,6 +214,7 @@ export const Dino = memo(function Dino({
         </g>
         <path className="hind-leg" fill="#345748" d="M17 27h6v4h2v3H16v-2h1Z" />
         <path className="front-leg" fill="#203a31" d="M26 27h5v5h4v2h-9v-2h-1Z" />
+        <g className="dino-body">
         <path fill="#203a31" d="M12 23h3v-3h3v-3h3v-5h-1V6h2V3h3V1h14v2h3v3h2v10H32v4h-2v6h-2v3h-3v2h-8v-2h-4v-2h-1Z" />
         <path fill="#36594a" d="M24 4h3V2h10v2H27v2h-3ZM17 22h3v-3h2v8h-3v2h-3v-2h1Z" />
         <path fill="#648f79" d="M27 22h3v4h-2v3h-3v-4h2Z" />
@@ -213,6 +237,7 @@ export const Dino = memo(function Dino({
           <path fill="#f6d7ae" d="M5 24h3v5H5v-2H3v-4h2Z" />
           <path fill="#ffb7cc" d="M38 11h4v1h-4Z" />
         </g>}
+        </g>
       </svg></span>
     </button>
   )

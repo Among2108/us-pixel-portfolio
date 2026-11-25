@@ -266,6 +266,7 @@ export const entries: readonly Entry[] = [
   {
     id: 'pick-us',
     name: 'PICK US',
+    demoUrl: 'https://pick-us-v2-pilot-ce0a1f.netlify.app/',
     category: 'Thai–English Shopping Assistance Web App',
     badge: 'Prototype · Testing',
     copy: 'A bilingual shopping-assistance prototype for international customers requesting products from Thailand, with customer and admin workflows under development and testing.',
@@ -277,6 +278,7 @@ export const entries: readonly Entry[] = [
   {
     id: 'deck-forge',
     name: 'DECK FORGE',
+    demoUrl: 'https://toykan-merchant-review-production.up.railway.app/',
     category: 'Board Game & Trading Card Store Web App',
     badge: 'Prototype · Testing',
     copy: 'A store and table-booking prototype that brings together service information, booking details, and price-and-deposit estimates.',
@@ -288,6 +290,7 @@ export const entries: readonly Entry[] = [
   {
     id: 'maipaws',
     name: 'MaiPaws',
+    demoUrl: 'https://jsd-project-group-2.vercel.app/',
     category: 'Simulated Pet E-commerce Web App',
     badge: 'Functional Demo',
     copy: 'A working full-stack demo of a pet e-commerce store, built as a team project with product browsing, shopping-cart, and order workflows.',
