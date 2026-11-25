@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <title>ASLAN.EXE — mint-bandana pixel dinosaur</title>
+  <path fill="#f8f8ed" d="M1 0h14v1h1v14h-1v1H1v-1H0V1h1Z"/>
+  <path fill="#203a31" d="M1 7h1v2h2v1h2V8h1V6h1V3h1V2h5v1h1v4h-4v2h1v1h-2v2H9v2h2v1H8v-3H6v2h1v1H4v-3H3v-1H2V9H1Z"/>
+  <path fill="#36594a" d="M9 3h2v1H9ZM3 10h3v1H3Z"/>
+  <path fill="#648f79" d="M9 9h1v2H9Z"/>
+  <path fill="#f8f8ed" d="M11 3h2v2h-2Z"/>
+  <path fill="#203a31" d="M12 3h1v1h-1Z"/>
+  <path fill="#a5cbb5" d="M13 6h2v1h-2Z"/>
+  <path fill="#9bcab5" d="M7 6h1v1h3v1H8v1H7V8H5V7h2Z"/>
+</svg>
