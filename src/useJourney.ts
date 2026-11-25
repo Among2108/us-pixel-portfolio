@@ -72,6 +72,7 @@ const speedOptions: Record<Speed, number> = {
 const motionPreference = 'aslan-ambient-motion'
 const blockingOverlay = 'dialog[open], [role="dialog"][aria-modal="true"], [data-tour-settings-open]'
 const scrollTolerance = 2
+const manualDirectionThreshold = 2
 const settleQuietTime = 180
 const settleMinimumTime = 220
 const replayIdleMs = 30_000
@@ -286,6 +287,7 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
     let frame = 0
     let idleTimer: ReturnType<typeof setTimeout> | undefined
     let lastY = window.scrollY
+    let directionAnchorY = lastY
     const update = () => {
       frame = 0
       let layout = geometry()
@@ -316,6 +318,7 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
         metric.range = layout.range
         window.scrollTo({ top: layout.top + positionRef.current / routeLength * layout.range, behavior: 'instant' })
         layout = geometry() ?? layout
+        directionAnchorY = clamp(window.scrollY, layout.top, layout.top + layout.range)
       }
       const route = readJourney(layout.position)
       const distance = metric.anchorDistance + (layout.position - metric.anchorPosition) * metric.width
@@ -343,11 +346,24 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
       lastMovementAt.current = performance.now()
       if (replayTransition.current) {
         lastY = y
+        directionAnchorY = clamp(y, layout.top, layout.top + layout.range)
         clearTimeout(idleTimer)
         setRunning(false)
         return
       }
-      setDirection(y > lastY ? 1 : -1)
+      const facingY = clamp(y, layout.top, layout.top + layout.range)
+      if (runtime.current) {
+        // Auto Run owns forward travel, including its settling phase. Small
+        // compositor acknowledgements already accepted by followsCommand()
+        // must not flip the mascot on high-refresh-rate/mobile screens.
+        setDirection(1)
+        directionAnchorY = facingY
+      } else if (Math.abs(facingY - directionAnchorY) >= manualDirectionThreshold) {
+        // Accumulate real manual movement before turning. Clamp elastic
+        // overscroll and retain the anchor through subpixel scroll noise.
+        setDirection(facingY > directionAnchorY ? 1 : -1)
+        directionAnchorY = facingY
+      }
       lastY = y
       if (prefersReducedMotion()) {
         clearTimeout(idleTimer)
@@ -521,6 +537,7 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
     window.scrollTo({ top: window.scrollY, behavior: 'instant' })
     runtime.current = { phase: 'settling', startedAt, stableSince: startedAt, lastY: window.scrollY }
     const runGeneration = ++generation.current
+    setDirection(1)
     setAutoMode('travelling')
 
     const step = (now: number) => {

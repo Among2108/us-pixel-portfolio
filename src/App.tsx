@@ -10,7 +10,6 @@ import resumeUrl from './assets/aslan-resume.txt?url'
 const iconPaths = {
   dino: 'M14 3h8v2h2v9h-7v5h-2v4h-4v-4H8v4H5v-5H3v-2H1v-5h2v3h4v-2h3V7h2V5h2Z M17 6v2h2V6Z M19 11v1h5v-1Z',
   arrow: 'M12 4h3v3h3v3h3v4h-3v3h-3v3h-3v-4h3v-3H3v-3h12V8h-3Z',
-  out: 'M6 4h14v14h-3V9h-2v3h-3v3H9v3H6v-3h3v-3h3V9h3V7H6Z',
   mouse: 'M8 2h8v2h3v16h-3v2H8v-2H5V4h3ZM8 5v14h8V5ZM11 6h2v5h-2Z',
   flag: 'M4 3h16v11h-3v-3H7v11H4Zm3 3v2h10V6Z',
   star: 'M10 2h4v7h7v4h-7v8h-4v-8H3V9h7Z',
@@ -43,7 +42,7 @@ function CardTop({ title, codeLabel, icon }: { title: string; codeLabel: string;
 }
 
 function DetailButton({ onClick, children = 'View details' }: { onClick: () => void; children?: ReactNode }) {
-  return <button className="detail-button" onClick={onClick}>{children} <Icon name="out" /></button>
+  return <button className="detail-button" onClick={onClick}>{children}</button>
 }
 
 function Screenshot({ image, expanded = false, open, demoUrl }: { image: PortfolioImage; expanded?: boolean; open?: () => void; demoUrl?: string }) {
@@ -63,7 +62,7 @@ function Screenshot({ image, expanded = false, open, demoUrl }: { image: Portfol
         : <button type="button" className="screenshot-frame" onClick={open} aria-label={`Open details: ${image.alt}`}>{picture}</button>}
       {status === 'failed' && <button className="media-retry" onClick={() => retryImage(target.src)} aria-label={`Retry image: ${image.alt}`}>Retry image</button>}
     </div>
-    <figcaption><span>{image.caption}</span><a href={image.full.src} target="_blank" rel="noopener noreferrer" aria-label={`View image: ${image.alt} (opens in a new tab)`}>View image ↗</a></figcaption>
+    <figcaption><span>{image.caption}</span><a href={image.full.src} target="_blank" rel="noopener noreferrer" aria-label={`View image: ${image.alt} (opens in a new tab)`}>View image</a></figcaption>
   </figure>
 }
 
@@ -106,7 +105,7 @@ function EntryCard({ entry, open }: { entry: Entry; open: OpenDetail }) {
     <CardTop title={isProject ? 'PROJECT LOG' : 'EXPERIENCE LOG'} codeLabel={`${code(index % 3 + 1)}/03`} icon={isProject ? 'box' : 'crystal'} />
     <div className="card-body">
       <div className="entry-heading"><div className="entry-art"><Artifact name={entry.art} /></div><div>
-        <p className="card-kicker">{entry.category}</p><h3>{isProject && entry.demoUrl ? <a className="project-title" href={entry.demoUrl} target="_blank" rel="noopener noreferrer">{entry.name} ↗</a> : entry.name}</h3>
+        <p className="card-kicker">{entry.category}</p><h3>{isProject && entry.demoUrl ? <a className="project-title" href={entry.demoUrl} target="_blank" rel="noopener noreferrer">{entry.name}</a> : entry.name}</h3>
         {entry.badge && <span className="status-badge">{entry.badge}</span>}
       </div></div>
       <p className="entry-copy">{entry.copy}</p>
@@ -147,16 +146,16 @@ function TrainingCard({ open }: { open: OpenDetail }) {
 function ResumeDownloads({ expanded = false }: { expanded?: boolean }) {
   return <div className="resume-downloads">
     {resumeFiles.map(file => file.src
-      ? <a key={file.id} className="detail-button" href={file.src} download={file.expectedFilename}>{file.label} <Icon name="out" /></a>
+      ? <a key={file.id} className="detail-button" href={file.src} download={file.expectedFilename}>{file.label}</a>
       : expanded && <span key={file.id} className="unavailable-download">{file.label} · Unavailable</span>)}
     {!expanded && resumeFiles.some(file => !file.src) && <p className="download-note">Résumé PDFs not yet supplied.</p>}
-    <a className="detail-button summary-download" href={resumeUrl} download="aslan-resume.txt">Download Portfolio Summary <Icon name="out" /></a>
+    <a className="detail-button summary-download" href={resumeUrl} download="aslan-resume.txt">Download Portfolio Summary</a>
   </div>
 }
 
 function ContactLinks() {
   return <div className="contact-actions">
-    {contact.links.map(({ label, href }) => <a key={href} href={href} target="_blank" rel="noopener noreferrer">{label} <Icon name="out" /></a>)}
+    {contact.links.map(({ label, href }) => <a key={href} href={href} target="_blank" rel="noopener noreferrer">{label}</a>)}
   </div>
 }
 
@@ -330,7 +329,7 @@ export default function App() {
     modalTitle = detailEntry.name
     modalContent = <><p className="dialog-role">{detailEntry.category}</p>{detailEntry.badge && <span className="status-badge">{detailEntry.badge}</span>}<p>{detailEntry.copy}</p>{detailEntry.detail.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
       {detailEntry.id === 'tofu-systems' ? <ul className="system-list">{tofuSystems.map(system => <li key={system.id}>{system.name}</li>)}</ul> : <><h3>{entries.indexOf(detailEntry) >= 3 ? 'Technologies' : 'Experience areas'}</h3><Tags tags={detailEntry.tags} /></>}
-      {detailEntry.demoUrl && <a href={detailEntry.demoUrl} target="_blank" rel="noopener noreferrer">Visit {detailEntry.name} ↗</a>}
+      {detailEntry.demoUrl && <a href={detailEntry.demoUrl} target="_blank" rel="noopener noreferrer">Visit {detailEntry.name}</a>}
       <ImageGallery images={detailEntry.images} demoUrl={detailEntry.demoUrl} /></>
   } else if (detailSystem) {
     modalTitle = detailSystem.name
