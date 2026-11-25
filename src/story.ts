@@ -160,7 +160,7 @@ export const tofuSkincare = {
   detail: [],
   tags: ['Customer service', 'Operational coordination', 'Internal web applications'],
   art: 'tofu',
-  images: [image('tofu-workplace-01', 'Tofu Skincare store interior, cropped to protect customers’ privacy.', 'Interior of the Tofu Skincare store with branded signage', 'photo')],
+  images: [image('tofu-workplace-01', 'Shoppers and carts fill the entrance to Tofu Skincare Megamart.', 'Customers stand beside shopping carts near the entrance, with more shoppers visible in the cosmetics aisles. Faces are obscured.', 'photo')],
   internalApplications: {
     id: 'tofu-systems',
     name: 'Internal Web Applications',
@@ -310,5 +310,5 @@ export const training = {
   category: 'Training',
   copy: 'Built a foundation in web development through hands-on work with JavaScript and React, Git-based workflows, and collaborative projects.',
   detail: ['The bootcamp strengthened my problem-solving, communication, and adaptability, and helped me connect technical learning with practical team development.'],
-  images: [image('generation-bootcamp', 'Group training activity at Generation Thailand, cropped to protect attendees’ privacy.', 'Collaborative training activity with a Generation Thailand shirt', 'photo')],
+  images: [image('generation-bootcamp', 'A group activity at the Generation Thailand bootcamp.', 'Bootcamp participants in blue Generation Thailand shirts smile as a seated teammate holds a crumpled paper ball.', 'photo')],
 } as const
