@@ -7,6 +7,11 @@
     --mint: #9bcab5;
     --sage: #527962;
     --line: #cbd8c9;
+    --meadow-soil: #b0ccb0;
+    --hollow-soil: #b7aad3;
+    --sandbox-soil: #dcb78f;
+    --signal-soil: #729585;
+    --page-soil: var(--meadow-soil);
     --pixel: 'Press Start 2P', monospace;
     --mono: 'DM Mono', monospace;
     --sans: 'Manrope', system-ui, sans-serif;
@@ -16,11 +21,20 @@
   }
 
   html { scrollbar-color: #7da78f var(--cream); scrollbar-width: thin; scrollbar-gutter: stable; }
+  html:has(.game-screen.world-1) { --page-soil: var(--hollow-soil); }
+  html:has(.game-screen.world-2) { --page-soil: var(--sandbox-soil); }
+  html:has(.game-screen.world-3) { --page-soil: var(--signal-soil); }
+  /* Keep document scrolling native while containing endpoint bounce. The
+     document canvas matches the floor if a browser exposes its boundary. */
+  html:has(.game-screen), html:has(.game-screen) body {
+    background: var(--page-soil);
+    overscroll-behavior-y: none;
+  }
   button:not(:disabled) { cursor: pointer; }
   :focus-visible { outline: 2px dashed #416e59; outline-offset: 4px; }
 }
 
-.scroll-track { min-height: calc(100dvh + var(--route-size) * clamp(330px, 41vw, 620px)); }
+.scroll-track { min-height: calc(100dvh + var(--route-size) * clamp(330px, 41vw, 620px)); overflow-anchor: none; }
 .startup { min-height: 100dvh; display: grid; place-items: center; background: var(--cream); }
 .startup-art { position: relative; width: min(300px, 76vw); color: var(--green); }
 .startup-art h1 { text-align: center; font: 700 clamp(20px, 5vw, 30px)/1.4 var(--pixel); }
@@ -94,7 +108,7 @@
   --shadow: #709680;
   --sky: linear-gradient(180deg, #d9ebe2 0%, #e9f0e0 56%, #eff3df 100%);
   --particle: #fdfbec;
-  --soil: #b0ccb0;
+  --soil: var(--meadow-soil);
   --turf: #4e7d61;
   --ground-detail: #94b99d;
   position: relative; container-type: inline-size; isolation: isolate; overflow: hidden;
@@ -107,20 +121,20 @@
   --stage-ink: #382e50; --title-accent: #6d5090; --card-fill: #fcf5ef; --card-top: #eadcf1;
   --card-line: #c9b6d6; --shadow: #9c89b5; --particle: #fffbff;
   --sky: linear-gradient(160deg, #dbd6fa 0%, #f4dfed 56%, #faeace 100%);
-  --soil: #b7aad3; --turf: #8168a6; --ground-detail: #a291c1;
+  --soil: var(--hollow-soil); --turf: #8168a6; --ground-detail: #a291c1;
 }
 .world-2 {
   --stage-ink: #4d3930; --title-accent: #825e48; --card-fill: #fff5e6; --card-top: #f0dac4;
   --card-line: #d8bb9f; --shadow: #c29070; --particle: #fff8e0;
   --sky: linear-gradient(175deg, #f3dbc0 0%, #faf0d9 66%, #f7e6c8 100%);
-  --soil: #dcb78f; --turf: #9e6e51; --ground-detail: #caa47e;
+  --soil: var(--sandbox-soil); --turf: #9e6e51; --ground-detail: #caa47e;
 }
 .world-3 {
   --stage-ink: #eef4dc; --title-accent: #a9d4b9; --card-top: #dcebe0; --shadow: #679486;
   --particle: #ceeece; --sky: linear-gradient(168deg, #182d2e, #254542 72%, #2e5349);
-  --soil: #729585; --turf: #375e53; --ground-detail: #5d8273;
+  --soil: var(--signal-soil); --turf: #375e53; --ground-detail: #5d8273;
 }
-.stage::before {
+.scene-plane::before {
   content: ''; position: absolute; inset: 0; opacity: .2; pointer-events: none;
   background: radial-gradient(#6d927d 1px, transparent 1px) 0 0 / 15px 15px;
   mask-image: linear-gradient(#000, transparent 78%);
@@ -301,7 +315,7 @@
 .trail-sign strong { display: block; margin-top: 3px; font: 400 8px/1.35 var(--pixel); text-transform: uppercase; }
 
 .dino-avatar { position: absolute; z-index: 5; left: 49%; bottom: var(--ground-height); width: clamp(94px, 13.5cqw, 183px); pointer-events: none; }
-.dino-sprite { position: relative; display: block; width: 100%; overflow: visible; translate: 0 calc(var(--jump) * -1 * clamp(67px, 21dvh, 175px)); }
+.dino-sprite { position: relative; display: block; width: 100%; overflow: visible; translate: 0 calc(var(--jump) * -1 * clamp(67px, 21svh, 175px)); }
 .dino-shadow { position: absolute; bottom: -3px; left: 30%; width: 67%; height: 8px; background: #203a3157; clip-path: polygon(9% 0, 91% 0, 91% 22%, 100% 22%, 100% 78%, 91% 78%, 91% 100%, 9% 100%, 9% 78%, 0 78%, 0 22%, 9% 22%); }
 .is-running .dino-sprite { animation: sprint-bob .3s steps(1, end) infinite; }
 .is-running .front-leg { animation: stride .3s steps(1, end) infinite; }
@@ -455,19 +469,26 @@
 
 /* The scene fills the viewport. Reading and navigation occupy real layout rows. */
 .game-screen.stage {
-  --ground-height: calc(clamp(22px, 4.5dvh, 48px) + env(safe-area-inset-bottom));
-  --character-size: clamp(64px, min(10vw, 15dvh), 132px);
-  --jump-clearance: clamp(34px, 12dvh, 136px);
+  --ground-height: calc(clamp(22px, 4.5svh, 48px) + env(safe-area-inset-bottom));
+  --character-size: clamp(64px, min(10vw, 15svh), 132px);
+  --jump-clearance: clamp(34px, 12svh, 136px);
   /* The unicorn horn reaches seven units above the 44 × 34 sprite canvas. */
   --character-lane: calc(var(--ground-height) + var(--character-size) * 41 / 44 + var(--jump-clearance) + 16px);
   position: sticky; top: 0; display: flex; flex-direction: column; height: 100dvh;
-  border: 0; box-shadow: none;
+  border: 0; box-shadow: none; background: var(--soil);
+}
+/* Browser chrome may reveal more floor, but does not resize the reading and
+   scenery plane. Keep this wrapper out of its own stacking context so the
+   header and jumping mascot retain their existing order around portal layers. */
+.scene-plane {
+  position: relative; display: flex; flex-direction: column; flex: none;
+  width: 100%; height: 100svh; min-height: 0; background: var(--sky);
 }
 .game-screen .frame-width { width: min(1240px, calc(100% - clamp(20px, 7vw, 100px))); }
 .game-screen .masthead { position: relative; z-index: 12; background: var(--cream); color: var(--green); padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
 .game-screen .masthead-inner {
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: 18px;
-  height: auto; min-height: clamp(55px, 7.4dvh, 69px); padding-block: 5px;
+  height: auto; min-height: clamp(55px, 7.4svh, 69px); padding-block: 5px;
 }
 .masthead .brand { justify-self: start; }
 .journey-controls {
@@ -488,7 +509,7 @@
 .journey-control:disabled { opacity: .5; }
 .game-screen .game-shell {
   position: relative; display: grid; grid-template-rows: auto minmax(0, 1fr);
-  flex: 1; gap: clamp(5px, 1.1dvh, 12px); min-height: 0; padding-block: 12px var(--character-lane); pointer-events: none;
+  flex: 1; gap: clamp(5px, 1.1svh, 12px); min-height: 0; padding-block: 12px var(--character-lane); pointer-events: none;
 }
 .game-screen .stage-hud {
   position: relative; inset: auto; z-index: 11; min-width: 0; align-self: start;
@@ -571,7 +592,7 @@
 .media-retry { position: absolute; right: 3px; bottom: 3px; border: 1px solid var(--green); background: var(--cream); color: var(--green); padding: 4px 6px; font: 700 11px var(--sans); }
 .screenshot-frame {
   position: relative;
-  width: 100%; aspect-ratio: 16/9; max-height: clamp(90px, 24dvh, 220px);
+  width: 100%; aspect-ratio: 16/9; max-height: clamp(90px, 24svh, 220px);
   display: grid; place-items: center; overflow: hidden; border: 1px solid #9ab2a5;
   background: #e3eae2; min-width: 0;
 }
@@ -668,7 +689,7 @@
   .reading-title { margin-block: 8px; font-size: clamp(19px, 3.1cqw, 39px); }
   .reading-intro .intro-copy { font-size: 14px; line-height: 1.4; }
   .reading-panel .card-body { gap: 6px; padding: 10px; }
-  .screenshot-frame { max-height: clamp(78px, 18dvh, 150px); }
+  .screenshot-frame { max-height: clamp(78px, 18svh, 150px); }
   .game-screen .game-shell { padding-top: 6px; gap: 5px; }
 }
 @media (max-width: 1000px) {
@@ -680,7 +701,7 @@
 }
 @media (max-width: 760px) {
   .game-screen .frame-width { width: calc(100% - 20px); }
-  .game-screen.stage { --character-size: clamp(58px, 17vw, 92px); --jump-clearance: clamp(32px, 8dvh, 76px); }
+  .game-screen.stage { --character-size: clamp(58px, 17vw, 92px); --jump-clearance: clamp(32px, 8svh, 76px); }
   .game-screen .masthead-inner { grid-template: 'brand controls' auto 'chapters chapters' auto / minmax(0, 1fr) auto; gap: 2px 6px; padding-block: 5px 2px; }
   .masthead .brand { grid-area: brand; gap: 6px; }
   .masthead .journey-controls { grid-area: controls; --control-size: 37px; grid-template-columns: var(--control-size) var(--control-size) 66px var(--control-size); gap: 3px; }
@@ -699,7 +720,7 @@
   .reading-panel .entry-copy { font-size: 13px; line-height: 1.33; }
   .reading-panel .entry-art, .reading-panel .project-card .entry-art { width: 43px; height: 40px; }
   .reading-panel .entry-art .artifact, .reading-panel .project-card .entry-art .artifact { height: 32px; }
-  .screenshot-frame { max-height: 19dvh; }
+  .screenshot-frame { max-height: 19svh; }
 }
 @media (max-width: 480px) {
   .game-screen .stage-progress { gap: 4px; }
@@ -801,7 +822,7 @@
   .reading-panel .card-top { min-height: 20px; padding-block: 2px; }
 }
 @media (max-height: 455px) {
-  .game-screen.stage { --character-size: clamp(40px, 12dvh, 56px); --jump-clearance: 26px; }
+  .game-screen.stage { --character-size: clamp(40px, 12svh, 56px); --jump-clearance: 26px; }
   .game-screen:has(.endpoint-return) .contact-card .card-body { padding-block: 5px; }
 }
 @media (max-width: 380px) {

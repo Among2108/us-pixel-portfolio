@@ -371,48 +371,50 @@ export default function App() {
     <main className="scroll-track" ref={track} style={{ '--route-size': routeLength } as CSSProperties}>
       <h1 className="sr-only">Aslan Promjit — Junior Full-Stack Developer</h1>
       <div className={`game-screen stage world-${world}${!motion || reduced ? ' motion-off' : ''}${reduced ? ' reduced-motion' : ''}`} ref={screen} style={style}>
-        <WorldArt world={world} prop={prop} tileCount={journey.sceneryTileCount} />
-        {portal >= 0 && !reduced && <Warp portal={portal} title={portals[portal].name} opacity={cover} />}
-        {replayOpacity !== null && <Warp replay portal={0} title={portals[0].name} opacity={replayOpacity} />}
-        <header className="masthead" inert={returning}>
-          <div className="frame-width masthead-inner">
-            <button className="brand" onClick={() => goTo('profile')} aria-label="ASLAN.EXE Pixel Runner — back to start">
-              <span className="brand-mark"><Icon name="dino" /></span>
-              <span className="brand-wordmark"><strong>ASLAN<span>.EXE</span></strong><small>PIXEL RUNNER</small></span>
-            </button>
-            <nav className="site-nav" aria-label="Portfolio worlds">
-              {navLabels.map((label, index) => <button className="world-tab" key={label} onClick={() => goTo(chapterStops[index])} aria-current={world === index ? 'location' : undefined} title={worlds[index].theme} style={{ '--nav-tint': worlds[index].tint } as CSSProperties}>
-                <span className="nav-icon"><Icon name={worldIcons[index]} /></span><span className="nav-label">{label}</span>
-              </button>)}
-            </nav>
-            <div className="journey-controls" role="group" aria-label="Journey controls">
-              <button className="journey-control" onClick={previous} disabled={stopIndex === 0} aria-label="Previous stop" title="Previous stop"><Icon name="previous" /></button>
-              <button className="journey-control" onClick={next} disabled={stopIndex === readingStops.length - 1} aria-label="Next stop" title="Next stop"><Icon name="next" /></button>
-              <button data-auto-play className="journey-control auto-play" onClick={canPause ? pause : play} disabled={reduced || (ended && !canPause)} aria-label={playbackLabel} title={playbackLabel}><Icon name={canPause ? 'pause' : 'play'} /><span>{canPause ? 'Pause' : 'Play'}</span></button>
-              <button className="journey-control" onClick={() => open('settings')} aria-label="Tour settings" title="Tour settings" aria-haspopup="dialog"><Icon name="settings" /></button>
+        <div className="scene-plane">
+          <WorldArt world={world} prop={prop} tileCount={journey.sceneryTileCount} />
+          <header className="masthead" inert={returning}>
+            <div className="frame-width masthead-inner">
+              <button className="brand" onClick={() => goTo('profile')} aria-label="ASLAN.EXE Pixel Runner — back to start">
+                <span className="brand-mark"><Icon name="dino" /></span>
+                <span className="brand-wordmark"><strong>ASLAN<span>.EXE</span></strong><small>PIXEL RUNNER</small></span>
+              </button>
+              <nav className="site-nav" aria-label="Portfolio worlds">
+                {navLabels.map((label, index) => <button className="world-tab" key={label} onClick={() => goTo(chapterStops[index])} aria-current={world === index ? 'location' : undefined} title={worlds[index].theme} style={{ '--nav-tint': worlds[index].tint } as CSSProperties}>
+                  <span className="nav-icon"><Icon name={worldIcons[index]} /></span><span className="nav-label">{label}</span>
+                </button>)}
+              </nav>
+              <div className="journey-controls" role="group" aria-label="Journey controls">
+                <button className="journey-control" onClick={previous} disabled={stopIndex === 0} aria-label="Previous stop" title="Previous stop"><Icon name="previous" /></button>
+                <button className="journey-control" onClick={next} disabled={stopIndex === readingStops.length - 1} aria-label="Next stop" title="Next stop"><Icon name="next" /></button>
+                <button data-auto-play className="journey-control auto-play" onClick={canPause ? pause : play} disabled={reduced || (ended && !canPause)} aria-label={playbackLabel} title={playbackLabel}><Icon name={canPause ? 'pause' : 'play'} /><span>{canPause ? 'Pause' : 'Play'}</span></button>
+                <button className="journey-control" onClick={() => open('settings')} aria-label="Tour settings" title="Tour settings" aria-haspopup="dialog"><Icon name="settings" /></button>
+              </div>
             </div>
-          </div>
-        </header>
-        <Dino running={!reduced && running} unicorn={world === 1} greeting={stop.id === 'profile'} motion={motion && !reduced} interactive={portal < 0 && !returning} />
-        <div className="game-shell frame-width" inert={returning}>
-          <div className="stage-hud">
-            <span className="world-tag"><Icon name={portal >= 0 ? 'star' : worldIcons[world]} /> {portal >= 0 && !reduced ? portals[portal].name : <>WORLD {code(world + 1)} <b>/</b> {worlds[world].theme}</>}</span>
-            <div className="stage-progress">
-              <span className="reading-count" aria-label={`Stop ${stopIndex + 1} of ${readingStops.length}`}>{code(stopIndex + 1)}/{readingStops.length}</span>
-              <div className="progress-meter" role="progressbar" aria-label="Story progress" aria-valuenow={Math.round(progress * 100)}><span style={{ width: `${progress * 100}%` }} /></div>
-              <span className="tour-status" data-auto-state={autoState}><span role="status">{autoState === 'travelling' ? 'Auto Run' : autoState === 'ended' ? 'Finished' : 'Paused'}</span></span>
+          </header>
+          <Dino running={!reduced && running} unicorn={world === 1} greeting={stop.id === 'profile'} motion={motion && !reduced} interactive={portal < 0 && !returning} />
+          <div className="game-shell frame-width" inert={returning}>
+            <div className="stage-hud">
+              <span className="world-tag"><Icon name={portal >= 0 ? 'star' : worldIcons[world]} /> {portal >= 0 && !reduced ? portals[portal].name : <>WORLD {code(world + 1)} <b>/</b> {worlds[world].theme}</>}</span>
+              <div className="stage-progress">
+                <span className="reading-count" aria-label={`Stop ${stopIndex + 1} of ${readingStops.length}`}>{code(stopIndex + 1)}/{readingStops.length}</span>
+                <div className="progress-meter" role="progressbar" aria-label="Story progress" aria-valuenow={Math.round(progress * 100)}><span style={{ width: `${progress * 100}%` }} /></div>
+                <span className="tour-status" data-auto-state={autoState}><span role="status">{autoState === 'travelling' ? 'Auto Run' : autoState === 'ended' ? 'Finished' : 'Paused'}</span></span>
+              </div>
+              {ended && !returning && <div className="endpoint-return" data-replay-state={replayState}>
+                {returnPending && <span className="return-countdown" style={{ visibility: replaySeconds === null ? 'hidden' : 'visible' }}>Returning to start in <span>{replaySeconds ?? 30}</span>s</span>}
+                {replayState === 'stayed' && <span role="status">Staying at Contact</span>}
+                {returnPending && <button type="button" onClick={() => { stayHere(); replayButton.current?.focus({ preventScroll: true }) }}>Stay here</button>}
+                <button type="button" ref={replayButton} onClick={() => { focusStartAfterReplay.current = true; replayNow() }}>Replay now</button>
+              </div>}
             </div>
-            {ended && !returning && <div className="endpoint-return" data-replay-state={replayState}>
-              {returnPending && <span className="return-countdown" style={{ visibility: replaySeconds === null ? 'hidden' : 'visible' }}>Returning to start in <span>{replaySeconds ?? 30}</span>s</span>}
-              {replayState === 'stayed' && <span role="status">Staying at Contact</span>}
-              {returnPending && <button type="button" onClick={() => { stayHere(); replayButton.current?.focus({ preventScroll: true }) }}>Stay here</button>}
-              <button type="button" ref={replayButton} onClick={() => { focusStartAfterReplay.current = true; replayNow() }}>Replay now</button>
-            </div>}
-          </div>
-          <div className="scene-track">
-            <StoryScene key={stop.id} stop={stop} open={open} goTo={goTo} covered={!reduced && cover >= .65} />
+            <div className="scene-track">
+              <StoryScene key={stop.id} stop={stop} open={open} goTo={goTo} covered={!reduced && cover >= .65} />
+            </div>
           </div>
         </div>
+        {portal >= 0 && !reduced && <Warp portal={portal} title={portals[portal].name} opacity={cover} />}
+        {replayOpacity !== null && <Warp replay portal={0} title={portals[0].name} opacity={replayOpacity} />}
       </div>
       {detail && <Modal title={modalTitle} close={close} motion={motion && !reduced}>{modalContent}</Modal>}
     </main>

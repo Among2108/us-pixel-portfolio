@@ -73,6 +73,7 @@ const motionPreference = 'aslan-ambient-motion'
 const blockingOverlay = 'dialog[open], [role="dialog"][aria-modal="true"], [data-tour-settings-open]'
 const scrollTolerance = 2
 const manualDirectionThreshold = 2
+const geometryTolerance = 1
 const settleQuietTime = 180
 const settleMinimumTime = 220
 const replayIdleMs = 30_000
@@ -194,8 +195,16 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
 
   const geometry = useCallback(() => {
     if (!track.current || !screen.current) return null
-    const top = track.current.getBoundingClientRect().top + window.scrollY
-    const range = track.current.offsetHeight - screen.current.offsetHeight
+    const trackBounds = track.current.getBoundingClientRect()
+    const top = trackBounds.top + window.scrollY
+    // Both outer elements include the same dynamic viewport height. Subtract
+    // their fractional heights so Safari toolbar changes cancel exactly,
+    // rather than rounding independently through offsetHeight.
+    const measuredRange = trackBounds.height - screen.current.getBoundingClientRect().height
+    const previousRange = sceneryMetric.current?.range
+    const range = previousRange !== undefined && Math.abs(measuredRange - previousRange) <= geometryTolerance
+      ? previousRange
+      : measuredRange
     const width = screen.current.clientWidth
     return range > 0 && width > 0 ? { top, range, width, position: clamp((window.scrollY - top) / range) * routeLength } : null
   }, [track, screen])
@@ -378,7 +387,8 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
       if (!frame) frame = requestAnimationFrame(update)
     }
     const resize = () => {
-      pauseForInteraction()
+      // Height-only browser chrome changes do not change the route budget.
+      // update() still pauses and rebases a real width or range change.
       schedule()
     }
     update()
@@ -522,7 +532,7 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
     const layout = geometry()
     if (!layout) return
     const pixelsPerUnit = layout.range / routeLength
-    const destinationY = Math.round(layout.top + layout.range)
+    const destinationY = layout.top + layout.range
     if (window.scrollY >= destinationY - 1) return
 
     const beginTravel = (y: number, now: number) => {

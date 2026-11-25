@@ -22,7 +22,7 @@ function sourceCode(filename) {
   return compiled.get(filename);
 }
 
-function session({ hz = 60, lag = false, jitter = false, start = 0, reduced = false } = {}) {
+function session({ hz = 60, lag = false, jitter = false, start = 0, reduced = false, viewportHeight = 932 } = {}) {
   let time = 0;
   let nextId = 0;
   let changed = true;
@@ -33,6 +33,8 @@ function session({ hz = 60, lag = false, jitter = false, start = 0, reduced = fa
   let pendingScroll = null;
   let frameNumber = 0;
   let scrollRange = 0;
+  const layout = { height: viewportHeight, width: 430 };
+  const scrollCommands = [];
   const hooks = [];
   const effects = [];
   const raf = new Map();
@@ -122,6 +124,7 @@ function session({ hz = 60, lag = false, jitter = false, start = 0, reduced = fa
     setInterval: (fn, delay) => addTimer(fn, delay, true),
     clearInterval: token => timers.delete(token),
     scrollTo({ top, behavior }) {
+      scrollCommands.push({ top, behavior, time });
       const target = Math.max(0, Math.min(scrollRange, top));
       if (lag && behavior === 'instant') pendingScroll = target;
       else {
@@ -168,12 +171,16 @@ function session({ hz = 60, lag = false, jitter = false, start = 0, reduced = fa
   }
   const journey = load(path.join(sourceRoot, 'src/useJourney.ts'));
   // Mobile layout's minimum scroll distance is 330 CSS px per route unit.
-  scrollRange = Math.round(journey.routeLength * 330);
+  scrollRange = journey.routeLength * 330;
   const track = { current: {
-    offsetHeight: 932 + scrollRange,
-    getBoundingClientRect: () => ({ top: -window.scrollY }),
+    get offsetHeight() { return Math.round(layout.height + scrollRange); },
+    getBoundingClientRect: () => ({ top: -window.scrollY, height: layout.height + scrollRange }),
   } };
-  const screen = { current: { offsetHeight: 932, clientWidth: 430 } };
+  const screen = { current: {
+    get offsetHeight() { return Math.round(layout.height); },
+    get clientWidth() { return layout.width; },
+    getBoundingClientRect: () => ({ top: 0, height: layout.height, width: layout.width }),
+  } };
 
   function render() {
     let attempts = 0;
@@ -228,6 +235,13 @@ function session({ hz = 60, lag = false, jitter = false, start = 0, reduced = fa
     get time() { return time; },
     get route() { return journey; },
     get range() { return scrollRange; },
+    get scrollCommands() { return scrollCommands; },
+    resize({ height = layout.height, width = layout.width, range = scrollRange } = {}, notify = true) {
+      layout.height = height;
+      layout.width = width;
+      scrollRange = range;
+      if (notify) dispatch('resize');
+    },
     setY(y) { physicalY = y; pendingScroll = null; observe(y); },
     setHidden(value) {
       document.hidden = value;
@@ -374,6 +388,92 @@ test('Reduced motion prevents automatic playback', t => {
   s.tick(60);
   assert.equal(s.api.playing, false);
   assert.equal(s.y, 0);
+});
+
+test('An unchanged resize notification does not interrupt Auto Run', t => {
+  const s = session({ start: 1000 });
+  t.after(() => s.dispose());
+  s.api.play();
+  s.tick(60);
+  const y = s.y;
+  s.resize();
+  s.tick(60);
+  assert.equal(s.api.playing, true);
+  assert.equal(s.api.direction, 1);
+  assert.ok(s.y > y, 'Travel continues after a redundant resize event');
+});
+
+test('Height-only toolbar resize keeps Auto Run moving through fractional viewport changes', t => {
+  const s = session({ start: 1000, viewportHeight: 800.4 });
+  t.after(() => s.dispose());
+  s.api.play();
+  s.tick(60);
+  let previousY = s.y;
+  for (const height of [840.4, 890.8, 932.4, 932.8, 872.4, 800.8]) {
+    s.resize({ height });
+    s.tick(30);
+    assert.equal(s.api.playing, true, `A toolbar height of ${height} must not pause the tour`);
+    assert.equal(s.api.direction, 1);
+    assert.ok(s.y > previousY, 'Toolbar resizing must not stop or reverse travel');
+    previousY = s.y;
+  }
+});
+
+test('Fractional toolbar rounding does not rebase a paused scene or move native scroll', t => {
+  const s = session({ start: 1600, viewportHeight: 932.4 });
+  t.after(() => s.dispose());
+  const progress = s.api.progress;
+  const scenery = s.api.sceneryDistance;
+  const commands = s.scrollCommands.length;
+  // offsetHeight subtraction changes from 4591 to 4590 at these heights,
+  // while the real outer-height difference stays 4590.3 CSS px throughout.
+  for (const height of [932.8, 932.4, 932.8, 932.4]) {
+    s.resize({ height }, false);
+    s.dispatch('scroll');
+    s.tick();
+    assert.equal(s.y, 1600, 'A toolbar acknowledgement must not issue a scroll correction');
+    assert.equal(s.scrollCommands.length, commands);
+    assert.ok(Math.abs(s.api.progress - progress) < 1e-10);
+    assert.ok(Math.abs(s.api.sceneryDistance - scenery) < 1e-8);
+  }
+});
+
+test('Subpixel range noise uses one canonical range without repeated reanchoring', t => {
+  const s = session({ start: 1600 });
+  t.after(() => s.dispose());
+  const range = s.range;
+  const progress = s.api.progress;
+  const commands = s.scrollCommands.length;
+  for (const noise of [.25, -.5, .75, -.75, 0]) {
+    s.resize({ range: range + noise }, false);
+    s.dispatch('scroll');
+    s.tick();
+    assert.equal(s.scrollCommands.length, commands);
+    assert.equal(s.y, 1600);
+    assert.ok(Math.abs(s.api.progress - progress) < 1e-10);
+  }
+});
+
+test('A real orientation resize rebases progress and scenery, then permits resuming', t => {
+  const s = session({ start: 1600 });
+  t.after(() => s.dispose());
+  s.api.play();
+  s.tick(60);
+  const progress = s.api.progress;
+  const scenery = s.api.sceneryDistance;
+  s.resize({ height: 430, width: 932, range: s.route.routeLength * (932 * .41) });
+  s.tick(2);
+  assert.equal(s.api.playing, false, 'A real orientation change still pauses safely');
+  assert.ok(Math.abs(s.api.progress - progress) < 1e-10, 'The selected story position stays anchored');
+  assert.ok(Math.abs(s.api.sceneryDistance - scenery) < 1e-8, 'The scenery phase stays anchored');
+  assert.equal(s.api.sceneryTileCount, 5, 'The larger viewport gains enough scenery tiles');
+  const rebasedY = s.y;
+  s.api.play();
+  s.tick(120);
+  assert.equal(s.api.playing, true);
+  assert.equal(s.api.direction, 1);
+  assert.ok(s.y > rebasedY);
+  assert.ok(s.api.progress > progress);
 });
 
 for (const hz of [60, 120]) {
