@@ -204,8 +204,21 @@ function StoryScene({ stop, open, goTo, covered }: {
 
 function Modal({ title, close, motion, children }: { title: string; close: () => void; motion: boolean; children: ReactNode }) {
   const dialog = useRef<HTMLDialogElement>(null)
+  const entranceFinished = useRef(0)
+  const [entering, setEntering] = useState(motion)
   const [closing, setClosing] = useState(false)
   const requestClose = () => motion ? setClosing(true) : close()
+  useEffect(() => {
+    if (!motion) {
+      setEntering(false)
+      return
+    }
+    if (!entering || closing) return
+    // Animation events normally settle the full dust sequence. Release the
+    // decorative layer even if a browser cancels or omits an ending event.
+    const timer = window.setTimeout(() => setEntering(false), 1000)
+    return () => window.clearTimeout(timer)
+  }, [entering, closing, motion])
   useEffect(() => {
     if (!closing) return
     const timer = window.setTimeout(close, motion ? 320 : 0)
@@ -225,7 +238,13 @@ function Modal({ title, close, motion, children }: { title: string; close: () =>
       opener?.focus({ preventScroll: true })
     }
   }, [])
-  return <dialog ref={dialog} className="detail-dialog" aria-labelledby="dialog-title" data-transition={motion ? closing ? 'exit' : 'enter' : 'none'}
+  return <dialog ref={dialog} className="detail-dialog" aria-labelledby="dialog-title" data-transition={motion ? closing ? 'exit' : entering ? 'enter' : 'settled' : 'none'}
+    onAnimationEnd={event => {
+      if (!entering || closing || (event.animationName !== 'dust-gather' && event.animationName !== 'panel-materialize')) return
+      entranceFinished.current += 1
+      // Wait for every grain and the panel, including staggered grain delays.
+      if (entranceFinished.current >= dustGrains.length + 1) setEntering(false)
+    }}
     onCancel={event => { event.preventDefault(); requestClose() }}
     onClick={event => {
       if (event.target !== event.currentTarget) return
@@ -247,7 +266,7 @@ function Modal({ title, close, motion, children }: { title: string; close: () =>
         first?.focus()
       }
     }}>
-    {motion && <PixelDust />}
+    {motion && (entering || closing) && <PixelDust />}
     <div className="dialog-surface">
       <header className="dialog-header"><h2 id="dialog-title">{title}</h2><button className="detail-button" onClick={requestClose}>Close details <span aria-hidden="true">×</span></button></header>
       <div className="dialog-content">{children}</div>

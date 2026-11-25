@@ -4,7 +4,9 @@ import { journeyImageManifest } from './story'
 type ImageStatus = 'queued' | 'loading' | 'ready' | 'failed'
 type PreparedAsset = { status: ImageStatus; image?: HTMLImageElement }
 
-// Keep the decoded images for this visit, including subsequent trips through the worlds.
+// Keep small journey previews warm for subsequent trips through the worlds.
+// Larger Details images are owned by the visible image and the browser cache.
+const previewSources = new Set(journeyImageManifest.map(({ src }) => src))
 const assets = new Map<string, PreparedAsset>()
 const pending: string[] = []
 const listeners = new Set<() => void>()
@@ -35,8 +37,8 @@ function pump() {
       asset.status = success ? 'ready' : 'failed'
       if (!success) {
         image.removeAttribute('src')
-        asset.image = undefined
       }
+      if (!success || !previewSources.has(src)) asset.image = undefined
       active--
       notify()
       pump()

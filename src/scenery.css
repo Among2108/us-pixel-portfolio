@@ -43,6 +43,30 @@
   pointer-events: auto;
 }
 
+/* Touch devices keep the same art and moving rails, but only the larger stars
+   twinkle. Repeated offscreen scenery should not carry a desktop-sized budget
+   of independent animations and soft filters throughout a continuous tour. */
+@media (hover: none) and (pointer: coarse) {
+  .game-screen .world-art .particle-tile > i {
+    animation: none;
+    box-shadow: none;
+  }
+  .game-screen .world-art .crystal { filter: none; }
+  .game-screen .world-art .crystal-shine { animation: none; }
+  .game-screen .world-art .crystal:nth-child(4n + 1) .crystal-shine {
+    animation: crystal-pulse 4s steps(3, end) infinite alternate;
+  }
+  .game-screen .world-art .crystal-light {
+    animation: none;
+    box-shadow: none;
+    opacity: .6;
+  }
+  .game-screen .world-art .crystal-light:last-child {
+    animation: crystal-pulse 4s steps(3, end) infinite alternate;
+  }
+  .game-screen .world-art .cloud { animation: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .world-art .particle-tile > * { animation: none; }
 }
