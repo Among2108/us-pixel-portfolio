@@ -1,0 +1,11 @@
+{
+  "title": "ASLAN.EXE — Pixel Runner",
+  "description": "Follow a pixel dinosaur through four worlds to explore Aslan’s background, work experience, personal projects, and contact information.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

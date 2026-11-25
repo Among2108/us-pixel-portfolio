@@ -1,0 +1,106 @@
+/* Each gesture has its own transform layer: the avatar still owns facing,
+   and the original sprite still owns journey jumping and running. */
+.game-screen .dino-avatar[data-gesture-enabled] {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  line-height: 0;
+  overflow: visible;
+}
+
+.game-screen .dino-avatar[data-gesture-enabled="true"] {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.game-screen .dino-avatar[data-gesture-enabled="false"] {
+  pointer-events: none;
+}
+
+.game-screen .dino-avatar[data-gesture-enabled="true"]:focus-visible {
+  outline: 2px dashed var(--green);
+  outline-offset: 4px;
+}
+
+.dino-gesture-frame {
+  display: block;
+  width: 100%;
+  transform: none;
+}
+
+.dino-forelimb {
+  transform-box: view-box;
+  transform-origin: 29px 22px;
+}
+
+.dino-eye-closed {
+  opacity: 0;
+}
+
+.dino-avatar[data-gesture-enabled="true"][data-gesture="idle"]:not(.is-running) .dino-eye-open {
+  animation: mascot-blink-open 7.6s steps(1, end) infinite;
+}
+
+.dino-avatar[data-gesture-enabled="true"][data-gesture="idle"]:not(.is-running) .dino-eye-closed {
+  animation: mascot-blink-closed 7.6s steps(1, end) infinite;
+}
+
+@keyframes mascot-blink-open {
+  0%, 91%, 94%, 100% { opacity: 1; }
+  92% { opacity: 0; }
+}
+
+@keyframes mascot-blink-closed {
+  0%, 91%, 94%, 100% { opacity: 0; }
+  92% { opacity: 1; }
+}
+
+.dino-avatar[data-gesture="greeting"] .dino-forelimb {
+  animation: mascot-wave .9s steps(2, end);
+}
+
+.dino-avatar[data-gesture="greeting"] .dino-eye-open {
+  animation: mascot-wink-open .9s steps(1, end);
+}
+
+.dino-avatar[data-gesture="greeting"] .dino-eye-closed {
+  animation: mascot-wink-closed .9s steps(1, end);
+}
+
+.dino-avatar[data-gesture="activation"] .dino-gesture-frame {
+  animation: mascot-hop .6s steps(3, end);
+}
+
+.dino-avatar[data-gesture="activation"] .dino-forelimb {
+  animation: mascot-wave .6s steps(2, end);
+}
+
+@keyframes mascot-wave {
+  0%, 100% { transform: rotate(0); }
+  20%, 60% { transform: rotate(-40deg); }
+  40%, 80% { transform: rotate(-15deg); }
+}
+
+@keyframes mascot-wink-open {
+  0%, 48%, 100% { opacity: 1; }
+  29% { opacity: 0; }
+}
+
+@keyframes mascot-wink-closed {
+  0%, 48%, 100% { opacity: 0; }
+  29% { opacity: 1; }
+}
+
+@keyframes mascot-hop {
+  0%, 100% { transform: translateY(0); }
+  45% { transform: translateY(-6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dino-avatar .dino-gesture-frame,
+  .dino-avatar .dino-forelimb,
+  .dino-avatar .dino-eye-open,
+  .dino-avatar .dino-eye-closed { animation: none !important; }
+  .dino-eye-open { opacity: 1; }
+  .dino-eye-closed { opacity: 0; }
+}

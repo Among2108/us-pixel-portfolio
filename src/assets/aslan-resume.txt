@@ -1,0 +1,96 @@
+ASLAN PROMJIT
+Junior Full-Stack Developer
+Customer Service & Technical Support Background
+Portfolio Summary
+
+I'm Aslan, a Junior Full-Stack Developer with a background in customer
+service and basic technical support. I enjoy building practical web
+applications and clear, user-friendly experiences.
+
+TECHNOLOGIES I USE AND CONTINUE TO LEARN
+
+Languages: JavaScript, TypeScript, SQL, HTML, CSS
+Front end: React, Next.js, Tailwind CSS
+Back end: Node.js, Express.js, REST APIs
+Databases: MongoDB, PostgreSQL
+Workflow and design: Git, Figma, responsive interface design
+Internal tools: Google Apps Script, Google Sheets
+AI-assisted development: ChatGPT, Codex CLI, Figma Make
+Service and support: Customer communication, complaint handling,
+basic troubleshooting, coordination
+
+I use AI tools to clarify requirements, explore interface ideas,
+understand unfamiliar code, and support debugging while continuing
+to develop my own programming skills.
+
+WORK EXPERIENCE
+
+iCare
+Customer Service, Front Desk & Basic Technical Support
+Supported customers at the front desk, handled administrative tasks,
+and helped troubleshoot iPhone, iPad, and MacBook issues before
+escalating cases to technicians.
+- Answered customer questions and explained the next steps in the
+  service process.
+- Performed basic checks for software and device issues.
+- Coordinated service cases with technicians and assisted with limited
+  hands-on repair tasks.
+
+Tofu Skincare
+Customer Service
+Assisted Thai and international customers, answered questions, handled
+concerns, and coordinated with colleagues. I also developed internal web
+applications to support the team's everyday work.
+
+  Internal Web Applications — Used in daily operations
+  Five Google Apps Script applications supported everyday operations
+  at Tofu Skincare, using Google Apps Script and Google Sheets:
+  - Gift & Stock POS
+  - Delivery Management
+  - Lost & Found
+  - Lost Cash Log
+  - Tour Management & Operations Hub
+
+TRAINING
+
+Generation Thailand — Software Development Bootcamp
+Built a foundation in web development through hands-on work with
+JavaScript and React, Git-based workflows, and collaborative projects.
+The bootcamp strengthened my problem-solving, communication, and
+adaptability, and helped me connect technical learning with practical
+team development.
+
+PERSONAL PROJECTS
+
+PICK US — Prototype · Testing
+Thai–English Shopping Assistance Web App
+A bilingual shopping-assistance prototype for international customers
+requesting products from Thailand, with customer and admin workflows
+under development and testing.
+Technologies: Next.js, React, TypeScript, Tailwind CSS, PostgreSQL.
+
+DECK FORGE — Prototype · Testing
+Board Game & Trading Card Store Web App
+A store and table-booking prototype that brings together service
+information, booking details, and price-and-deposit estimates.
+Payment integration uses Omise Test Mode, with a LINE notification
+prototype.
+Technologies: Next.js, React, TypeScript, Auth.js, Prisma, PostgreSQL,
+Omise, Railway.
+
+MaiPaws — Functional Demo
+Simulated Pet E-commerce Web App
+A working full-stack demo of a pet e-commerce store, built as a team
+project with product browsing, shopping-cart, and order workflows.
+Developed through a Git-based collaborative workflow.
+Technologies: React, Vite, Tailwind CSS, Node.js, Express.js, MongoDB,
+REST APIs, JWT.
+
+CONTACT
+
+Email: oassalam2108@gmail.com
+Phone: +66 61 621 3960
+GitHub: https://github.com/Among2108
+LINE: https://line.me/ti/p/~lokikilo
+Instagram: https://www.instagram.com/among_uszq/
+Facebook: https://www.facebook.com/share/18kyZLcN1h/?mibextid=wwXIfr
