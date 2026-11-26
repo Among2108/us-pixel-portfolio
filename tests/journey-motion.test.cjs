@@ -48,7 +48,8 @@ function session({ hz = 60, lag = false, jitter = false, start = 0, reduced = fa
     collection.get(name).add(fn);
   };
   const dispatch = (name, event = {}) => {
-    const input = { isTrusted: true, preventDefault() {}, ...event };
+    const touches = name === 'touchstart' || name === 'touchmove' ? [{}] : [];
+    const input = { isTrusted: true, preventDefault() {}, touches, ...event };
     for (const fn of listeners.get(name) || []) fn(input);
   };
   const dependenciesChanged = (previous, next) => !previous || !next
@@ -394,6 +395,75 @@ test('Reduced motion prevents automatic playback', t => {
   s.tick(60);
   assert.equal(s.api.playing, false);
   assert.equal(s.y, 0);
+});
+
+// Each pair straddles a portal, including the extra reading stops at Tofu.
+const portalScenes = [['skills', 'icare'], ['training', 'pick-us'], ['maipaws', 'contact']];
+
+function stopY(s, id) {
+  return s.route.readingStops.find(stop => stop.id === id).at / s.route.routeLength * s.range;
+}
+
+for (const [index, [before, after]] of portalScenes.entries()) {
+  for (const forward of [true, false]) {
+    const from = forward ? before : after;
+    const to = forward ? after : before;
+    test(`Releasing a wheel inside portal ${index + 1} carries ${from} to ${to}`, t => {
+      const s = session();
+      t.after(() => s.dispose());
+      const left = stopY(s, before);
+      const right = stopY(s, after);
+      s.setY(stopY(s, from));
+      s.tick(2);
+      s.dispatch('wheel', { deltaY: forward ? 64 : -64 });
+      s.setY(left + (right - left) * (forward ? .55 : .9));
+      s.tick();
+      assert.equal(s.api.portal, index, 'Input ended within the portal');
+      s.tick(150);
+      assert.equal(s.api.portal, -1);
+      assert.equal(s.api.stop.id, to);
+      assert.equal(s.api.playing, false);
+      if (to === 'contact') assert.equal(s.api.ended, true);
+      const landingY = s.y;
+      s.tick(60);
+      assert.equal(s.y, landingY, 'The scene stays put for reading');
+    });
+  }
+}
+
+test('Holding a touch keeps control of the warp, then releasing completes in the last direction', t => {
+  const s = session();
+  t.after(() => s.dispose());
+  const target = new s.Element();
+  const finger = { identifier: 1, clientY: 300 };
+  s.dispatch('pointerdown', { target, pointerId: 1, pointerType: 'touch' });
+  s.dispatch('touchstart', { target, touches: [finger] });
+  // A browser can take over native panning before the user lifts the finger.
+  s.dispatch('pointercancel', { target, pointerId: 1, pointerType: 'touch' });
+  s.setY((stopY(s, 'skills') + stopY(s, 'icare')) / 2 + 65);
+  s.tick(150);
+  assert.equal(s.api.portal, 0, 'No scrolling is forced while the finger is down');
+  s.dispatch('touchmove', { target, touches: [finger] });
+  s.setY(s.y - 20);
+  s.tick();
+  assert.equal(s.api.direction, -1);
+  s.dispatch('touchend', { target, touches: [] });
+  s.tick(150);
+  assert.equal(s.api.portal, -1);
+  assert.equal(s.api.stop.id, 'skills');
+  assert.equal(s.api.playing, false);
+});
+
+test('Chapter navigation wins over a pending portal completion', t => {
+  const s = session();
+  t.after(() => s.dispose());
+  s.setY((stopY(s, 'skills') + stopY(s, 'icare')) / 2 + 40);
+  s.tick();
+  assert.equal(s.api.portal, 0);
+  s.api.goTo('contact');
+  s.tick(150);
+  assert.equal(s.api.stop.id, 'contact');
+  assert.equal(s.api.ended, true);
 });
 
 test('An unchanged resize notification does not interrupt Auto Run', t => {

@@ -35,6 +35,12 @@ export type ReadingStopId = ReadingStop['id']
 export const chapterStops = ['profile', 'icare', 'pick-us', 'contact'] as const
 export const routeLength = routeEnd + expandedLength
 
+// Portal n connects worlds n and n + 1, including any extra stops in world n.
+function portalLanding(portal: number, direction: 1 | -1) {
+  const nextChapter = readingStops.findIndex(stop => stop.id === chapterStops[portal + 1])
+  return readingStops[direction === 1 ? nextChapter : nextChapter - 1]
+}
+
 export function readJourney(travelPosition: number) {
   const position = clamp(travelPosition, 0, routeLength)
   const scenePosition = position <= expansionStart
@@ -190,6 +196,10 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
   const replayTransition = useRef<ReplayTransition | null>(null)
   const replayFrame = useRef(0)
   const activePointers = useRef(new Set<number>())
+  const touchHeld = useRef(false)
+  const portalDestinationY = useRef<number | null>(null)
+  const journey = readJourney(travelPosition)
+  const portal = journey.portal
   overlayOpenRef.current = overlayOpen
   ambientMotionRef.current = ambientMotion
 
@@ -210,6 +220,10 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
   }, [track, screen])
 
   const pauseForInteraction = useCallback(() => {
+    if (portalDestinationY.current !== null) {
+      portalDestinationY.current = null
+      window.scrollTo({ top: window.scrollY, behavior: 'instant' })
+    }
     if (!runtime.current) return
     runtime.current = null
     generation.current++
@@ -342,6 +356,9 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
       setSceneryLandmarkDistance(distance - metric.worldOrigin)
       setSceneryTileCount(Math.ceil(layout.width / metric.tileWidth) + 3)
       const y = window.scrollY
+      if (portalDestinationY.current !== null && Math.abs(y - portalDestinationY.current) <= 1) {
+        portalDestinationY.current = null
+      }
       const atContact = y >= layout.top + layout.range - 1
       setEnded(atContact)
       if (!replayTransition.current) {
@@ -418,8 +435,9 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
   const move = useCallback((step: -1 | 1) => {
     const layout = geometry()
     if (!layout) return
-    const { stopIndex } = readJourney(layout.position)
-    goTo(readingStops[clamp(stopIndex + step, 0, readingStops.length - 1)].id)
+    const { stopIndex, portal } = readJourney(layout.position)
+    const target = portal >= 0 ? portalLanding(portal, step) : readingStops[clamp(stopIndex + step, 0, readingStops.length - 1)]
+    goTo(target.id)
   }, [geometry, goTo])
 
   const next = useCallback(() => move(1), [move])
@@ -450,6 +468,12 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
       activity(event)
       if (!isTourExemptControl(event.target)) pauseForInteraction()
     }
+    // Native panning can cancel the pointer before the finger lifts on iOS.
+    const touchstart = (event: TouchEvent) => {
+      touchHeld.current = true
+      interruptUnlessExempt(event)
+    }
+    const touchend = (event: TouchEvent) => { touchHeld.current = event.touches.length > 0 }
     const pointerdown = (event: PointerEvent) => {
       if (event.isTrusted) {
         activePointers.current.add(event.pointerId)
@@ -494,12 +518,18 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
       resetReplayClock()
       if (document.hidden) {
         activePointers.current.clear()
+        touchHeld.current = false
         pauseForInteraction()
       }
     }
-    const blur = () => { activePointers.current.clear() }
+    const blur = () => {
+      activePointers.current.clear()
+      touchHeld.current = false
+    }
     window.addEventListener('wheel', interrupt, { passive: true, capture: true })
-    window.addEventListener('touchstart', interruptUnlessExempt, { passive: true, capture: true })
+    window.addEventListener('touchstart', touchstart, { passive: true, capture: true })
+    window.addEventListener('touchend', touchend, true)
+    window.addEventListener('touchcancel', touchend, true)
     window.addEventListener('touchmove', interruptUnlessExempt, { passive: true, capture: true })
     window.addEventListener('pointerdown', pointerdown, true)
     window.addEventListener('pointerup', pointerup, true)
@@ -512,7 +542,9 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
     document.addEventListener('visibilitychange', visibility)
     return () => {
       window.removeEventListener('wheel', interrupt, true)
-      window.removeEventListener('touchstart', interruptUnlessExempt, true)
+      window.removeEventListener('touchstart', touchstart, true)
+      window.removeEventListener('touchend', touchend, true)
+      window.removeEventListener('touchcancel', touchend, true)
       window.removeEventListener('touchmove', interruptUnlessExempt, true)
       window.removeEventListener('pointerdown', pointerdown, true)
       window.removeEventListener('pointerup', pointerup, true)
@@ -526,6 +558,36 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
       clearTimeout(tabTimer)
     }
   }, [move, pauseForInteraction, resetReplayClock])
+
+  // Only arm a landing while a warp is visible. Native scroll events postpone
+  // it through trackpad or touch momentum, and new input can interrupt it.
+  useEffect(() => {
+    if (portal < 0 || reduced || overlayOpen || autoMode !== 'paused') return
+    let timer: number
+    const finish = () => {
+      if (document.hidden || runtime.current || replayTransition.current || overlayOpenRef.current ||
+          activePointers.current.size || touchHeld.current || document.querySelector(blockingOverlay) || prefersReducedMotion()) return
+      const layout = geometry()
+      if (!layout || readJourney(layout.position).portal !== portal) return
+      const target = portalLanding(portal, direction)
+      const y = layout.top + target.at / routeLength * layout.range
+      portalDestinationY.current = y
+      window.scrollTo({ top: y, behavior: ambientMotionRef.current ? 'smooth' : 'instant' })
+    }
+    const arm = () => {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(finish, settleQuietTime)
+    }
+    const events = ['scroll', 'wheel', 'pointerup', 'pointercancel', 'touchend', 'touchcancel'] as const
+    for (const event of events) window.addEventListener(event, arm, { passive: true })
+    document.addEventListener('visibilitychange', arm)
+    arm()
+    return () => {
+      window.clearTimeout(timer)
+      for (const event of events) window.removeEventListener(event, arm)
+      document.removeEventListener('visibilitychange', arm)
+    }
+  }, [portal, direction, reduced, overlayOpen, autoMode, geometry])
 
   const play = useCallback(() => {
     if (runtime.current || replayTransition.current || prefersReducedMotion() || document.hidden || overlayOpenRef.current || document.querySelector(blockingOverlay)) return
@@ -544,6 +606,7 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
     // event after the cancellation. Settle before applying the interruption
     // guard and continue from the actual settled scroll position.
     const startedAt = performance.now()
+    portalDestinationY.current = null
     window.scrollTo({ top: window.scrollY, behavior: 'instant' })
     runtime.current = { phase: 'settling', startedAt, stableSince: startedAt, lastY: window.scrollY }
     const runGeneration = ++generation.current
@@ -790,7 +853,7 @@ export function useJourney(track: RefObject<HTMLElement | null>, screen: RefObje
   }, [])
 
   return {
-    ...readJourney(travelPosition),
+    ...journey,
     sceneryDistance,
     sceneryLandmarkDistance,
     sceneryTileWidth,
