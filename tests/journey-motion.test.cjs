@@ -352,20 +352,26 @@ for (const event of ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown
   });
 }
 
-test('An uncommanded scroll still stops playback, but tapping the mascot does not', t => {
-  const s = session({ start: 100 });
-  t.after(() => s.dispose());
-  s.api.play();
-  s.tick(60);
-  s.dispatch('pointerdown', { target: new s.Element('[data-auto-gesture]'), pointerId: 1 });
-  s.dispatch('pointerup', { target: new s.Element('[data-auto-gesture]'), pointerId: 1 });
-  s.tick(60);
-  assert.equal(s.api.playing, true);
-  s.setY(s.y - 40);
-  s.tick(2);
-  assert.equal(s.api.playing, false);
-  assert.equal(s.api.direction, -1);
-});
+for (const selector of ['[data-auto-gesture]', '[data-audio-toggle]']) {
+  test(`Touch and keyboard activation of ${selector} preserves playback while real scroll stops it`, t => {
+    const s = session({ start: 100 });
+    t.after(() => s.dispose());
+    s.api.play();
+    s.tick(60);
+    const target = new s.Element(selector);
+    s.dispatch('touchstart', { target });
+    s.dispatch('pointerdown', { target, pointerId: 1 });
+    s.dispatch('pointerup', { target, pointerId: 1 });
+    s.dispatch('keydown', { target, key: 'Enter' });
+    s.dispatch('keydown', { target, key: ' ' });
+    s.tick(60);
+    assert.equal(s.api.playing, true);
+    s.setY(s.y - 40);
+    s.tick(2);
+    assert.equal(s.api.playing, false);
+    assert.equal(s.api.direction, -1);
+  });
+}
 
 for (const interrupt of ['hidden', 'overlay', 'reduced']) {
   test(`${interrupt} still pauses Auto Run`, t => {

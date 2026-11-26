@@ -4,6 +4,7 @@ import { Dino } from './PixelArt'
 import { beats, clamp, code, contact, entries, portals, worlds, profile, skills, training, tofuSystems, portraitImage, resumeFiles, type Entry, type PortfolioImage } from './story'
 import { usePreparedImage, retryImage, markImageUnavailable } from './imageReadiness'
 import { chapterStops, readingStops, routeLength, useJourney, type ReadingStopId } from './useJourney'
+import { useJourneyAudio } from './useJourneyAudio'
 import { sceneryStyle } from './scenery'
 import resumeUrl from './assets/aslan-resume.txt?url'
 
@@ -22,6 +23,8 @@ const iconPaths = {
   play: 'M6 3h3v2h3v2h3v2h3v2h3v3h-3v2h-3v2h-3v2H9v2H6Z',
   pause: 'M5 4h5v16H5Zm9 0h5v16h-5Z',
   settings: 'M3 6h6V3h4v3h8v3h-8v3H9V9H3Zm0 10h12v-3h4v3h2v3h-2v3h-4v-3H3Z',
+  soundOn: 'M2 9h4V7h3V5h3v14H9v-2H6v-2H2Zm13-1h2v2h2v4h-2v2h-2v-3h2v-2h-2Zm4-4h2v3h2v10h-2v3h-2v-4h2V8h-2Z',
+  soundOff: 'M2 9h4V7h3V5h3v14H9v-2H6v-2H2Zm13-1h2v2h2V8h2v3h-2v2h2v3h-2v-2h-2v2h-2v-3h2v-2h-2Z',
 }
 
 const worldIcons = ['star', 'crystal', 'box', 'signal'] as const
@@ -313,6 +316,8 @@ export default function App() {
   const { stop, stopIndex, world, portal, phase, cover, nearest, progress, running, direction, playing, autoState, ended, reduced, motion, speed, goTo, next, previous, play, pause, pauseForInteraction, setSpeed, setMotion } = journey
   const { replayState, replaySeconds, replayOpacity, replayAuto, replayNow, stayHere } = journey
   const returning = replayState === 'returning'
+  const sound = useJourneyAudio({ world, portal: reduced ? -1 : portal, returning, blocked: detail !== null })
+  const soundLabel = sound.pending ? 'Cancel sound activation' : sound.enabled ? 'Turn sound off' : 'Turn sound on'
   const returnPending = !reduced && (replayState === 'counting' || replayState === 'waiting')
   const canPause = playing || (ended && (replayAuto || returnPending))
   const playbackLabel = canPause ? 'Pause Auto Run' : 'Play Auto Run'
@@ -363,6 +368,8 @@ export default function App() {
     modalTitle = 'Tour settings'
     modalContent = <><fieldset className="speed-options"><legend>Auto Run speed</legend>{(['Slow', 'Normal', 'Fast'] as const).map(value => <label key={value}><input type="radio" name="tour-speed" checked={speed === value} onChange={() => setSpeed(value)} /> {value}</label>)}</fieldset>
       <label className="motion-setting"><input type="checkbox" checked={motion && !reduced} disabled={reduced} onChange={event => setMotion(event.target.checked)} /> Motion</label>
+      <div className="sound-setting"><span>World music &amp; sound effects</span><button type="button" className="detail-button" onClick={sound.toggle} disabled={!sound.supported} aria-pressed={sound.enabled}>{sound.pending ? 'Cancel' : sound.enabled ? 'Sound on' : 'Sound off'}</button></div>
+      <p>Turn sound on for each world’s melody, jumps, and portals.</p>
       <p>{reduced ? 'Your reduced-motion preference keeps the world still and Auto Run unavailable.' : 'Auto Run travels continuously through every world. Choose a comfortable speed, or pause whenever you want to read. Scrolling, opening details, or leaving this tab pauses the tour; choose Play to continue.'}</p>
       {!reduced && <p>Motion controls the mascot’s idle gestures, background drift, and pixel dust transitions.</p>}</>
   }
@@ -388,11 +395,13 @@ export default function App() {
                 <button className="journey-control" onClick={previous} disabled={stopIndex === 0} aria-label="Previous stop" title="Previous stop"><Icon name="previous" /></button>
                 <button className="journey-control" onClick={next} disabled={stopIndex === readingStops.length - 1} aria-label="Next stop" title="Next stop"><Icon name="next" /></button>
                 <button data-auto-play className="journey-control auto-play" onClick={canPause ? pause : play} disabled={reduced || (ended && !canPause)} aria-label={playbackLabel} title={playbackLabel}><Icon name={canPause ? 'pause' : 'play'} /><span>{canPause ? 'Pause' : 'Play'}</span></button>
+                <button type="button" data-audio-toggle data-audio-state={sound.pending ? 'starting' : sound.enabled ? 'on' : 'off'} className="journey-control sound-toggle" onClick={sound.toggle} disabled={!sound.supported} aria-pressed={sound.enabled} aria-busy={sound.pending} aria-label={sound.supported ? 'Sound' : 'Sound unavailable in this browser'} title={sound.supported ? soundLabel : 'Sound unavailable in this browser'}><Icon name={sound.enabled ? 'soundOn' : 'soundOff'} /></button>
                 <button className="journey-control" onClick={() => open('settings')} aria-label="Tour settings" title="Tour settings" aria-haspopup="dialog"><Icon name="settings" /></button>
               </div>
             </div>
+            {sound.error && <p className="sound-feedback" role="status">{sound.error}</p>}
           </header>
-          <Dino running={!reduced && running} unicorn={world === 1} greeting={stop.id === 'profile'} motion={motion && !reduced} interactive={portal < 0 && !returning} />
+          <Dino running={!reduced && running} unicorn={world === 1} world={world} greeting={stop.id === 'profile'} motion={motion && !reduced} interactive={portal < 0 && !returning && detail === null} onJump={sound.jump} />
           <div className="game-shell frame-width" inert={returning}>
             <div className="stage-hud">
               <span className="world-tag"><Icon name={portal >= 0 ? 'star' : worldIcons[world]} /> {portal >= 0 && !reduced ? portals[portal].name : <>WORLD {code(world + 1)} <b>/</b> {worlds[world].theme}</>}</span>

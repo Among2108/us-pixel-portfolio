@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import './characterGestures.css'
 
 // Trace the ridgelines on a grid so even the distant silhouettes have pixel steps.
@@ -129,26 +129,61 @@ export const Landscape = memo(function Landscape({ tileCount = 4 }: { tileCount?
   )
 })
 
+type MascotGesture = 'idle' | 'greeting' | 'wave' | 'wink' | 'hop' | 'curious' | 'activation'
+
+const friendlyLines = ['Hi!', 'How are you?', "Let's go!", 'Nice to see you!', 'Enjoy the view!', 'Take your time.']
+const worldLines = [
+  ['Hello, stargazer!', 'To the stars!', 'Ready to explore?'],
+  ['Rainbow time!', 'A little magic!', 'Follow the rainbow!'],
+  ["Let's build!", 'Made with care!', 'Got an idea?'],
+  ['Say hello!', 'Thanks for visiting!', 'See you again!'],
+]
+
 export const Dino = memo(function Dino({
   running,
   unicorn,
   greeting = false,
   motion = true,
   interactive = true,
+  world = 0,
+  onJump,
 }: {
   running: boolean
   unicorn: boolean
   greeting?: boolean
   motion?: boolean
   interactive?: boolean
+  world?: number
+  onJump?: () => void
 }) {
-  type Gesture = 'idle' | 'greeting' | 'wave' | 'wink' | 'hop' | 'curious' | 'activation'
-  const [gesture, setGesture] = useState<Gesture>('idle')
+  const [gesture, setGesture] = useState<MascotGesture>('idle')
+  const [speech, setSpeech] = useState<{ line: string; id: number } | null>(null)
   const [visible, setVisible] = useState(() => typeof document === 'undefined' || !document.hidden)
   const greeted = useRef(false)
-  const nextGesture = useRef(0)
-
+  const currentGesture = useRef<MascotGesture>('idle')
+  const previousGesture = useRef<MascotGesture>('idle')
+  const previousLine = useRef('')
+  const speechId = useRef(0)
+  const latest = useRef({ running, world, onJump })
+  latest.current = { running, world, onJump }
   const gesturesEnabled = motion && interactive && visible
+
+  const performGesture = useCallback((next: MascotGesture) => {
+    if (!gesturesEnabled || currentGesture.current !== 'idle') return
+    currentGesture.current = next
+    previousGesture.current = next
+    setGesture(next)
+    if (next === 'hop' || next === 'activation') latest.current.onJump?.()
+  }, [gesturesEnabled])
+
+  const saySomething = useCallback((line?: string) => {
+    if (!gesturesEnabled) return
+    const options = [...friendlyLines, ...(worldLines[latest.current.world] ?? [])]
+      .filter(value => value !== previousLine.current)
+    const next = line ?? options[Math.floor(Math.random() * options.length)]
+    previousLine.current = next
+    setSpeech({ line: next, id: ++speechId.current })
+  }, [gesturesEnabled])
 
   useEffect(() => {
     const update = () => setVisible(!document.hidden)
@@ -157,41 +192,60 @@ export const Dino = memo(function Dino({
   }, [])
 
   useEffect(() => {
-    if (!greeting || !gesturesEnabled || running || greeted.current) return
-    // Wait for the initial journey measurement, then give visitors an obvious
-    // welcome instead of a gesture that finishes before the first card is read.
+    if (!greeting || !gesturesEnabled || greeted.current) return
     const timer = window.setTimeout(() => {
       greeted.current = true
-      setGesture('greeting')
+      performGesture('greeting')
+      saySomething('Hi!')
     }, 450)
     return () => window.clearTimeout(timer)
-  }, [greeting, gesturesEnabled, running])
+  }, [greeting, gesturesEnabled, performGesture, saySomething])
 
   useEffect(() => {
-    if (!gesturesEnabled || running) return
-    const sequence: Gesture[] = ['curious', 'wave', 'hop', 'wink']
-    let timer: number
-    const perform = () => {
-      const next = sequence[nextGesture.current % sequence.length]
-      nextGesture.current += 1
-      setGesture(current => current === 'idle' ? next : current)
-      timer = window.setTimeout(perform, 4300 + (nextGesture.current % 3) * 700)
+    if (!gesturesEnabled) {
+      currentGesture.current = 'idle'
+      setGesture('idle')
+      setSpeech(null)
+      return
     }
-    timer = window.setTimeout(perform, greeted.current ? 3800 : 4400)
-    return () => window.clearTimeout(timer)
-  }, [gesturesEnabled, running])
+    let gestureTimer: number
+    let speechTimer: number
+    const act = () => {
+      const options: MascotGesture[] = latest.current.running
+        ? ['wave', 'wink', 'hop']
+        : ['curious', 'wave', 'hop', 'wink']
+      const choices = options.filter(value => value !== previousGesture.current)
+      performGesture(choices[Math.floor(Math.random() * choices.length)])
+      gestureTimer = window.setTimeout(act, 3200 + Math.random() * 2200)
+    }
+    const chat = () => {
+      saySomething()
+      performGesture('wave')
+      speechTimer = window.setTimeout(chat, 6500 + Math.random() * 3000)
+    }
+    gestureTimer = window.setTimeout(act, 2700)
+    speechTimer = window.setTimeout(chat, 6500 + Math.random() * 1500)
+    return () => {
+      window.clearTimeout(gestureTimer)
+      window.clearTimeout(speechTimer)
+    }
+  }, [gesturesEnabled, performGesture, saySomething])
 
   useEffect(() => {
-    if (gesture === 'idle') return
+    if (gesture === 'idle' || !gesturesEnabled) return
     const duration = gesture === 'greeting' ? 2100 : gesture === 'curious' ? 1800 : 1250
-    const timer = window.setTimeout(() => setGesture('idle'), duration)
+    const timer = window.setTimeout(() => {
+      currentGesture.current = 'idle'
+      setGesture('idle')
+    }, duration)
     return () => window.clearTimeout(timer)
-  }, [gesture])
+  }, [gesture, gesturesEnabled])
 
   useEffect(() => {
-    // Journey movement and portal jumps take precedence over ambient poses.
-    if (!gesturesEnabled || running) setGesture('idle')
-  }, [gesturesEnabled, running])
+    if (!speech || !gesturesEnabled) return
+    const timer = window.setTimeout(() => setSpeech(null), 2800)
+    return () => window.clearTimeout(timer)
+  }, [speech, gesturesEnabled])
 
   const characterLabel = unicorn ? 'Rainbow unicorn dinosaur' : 'Green pixel dinosaur wearing a mint bandana'
   return (
@@ -201,12 +255,13 @@ export const Dino = memo(function Dino({
       data-auto-gesture
       data-gesture={gesturesEnabled ? gesture : 'idle'}
       data-gesture-enabled={gesturesEnabled}
-      aria-label={gesturesEnabled ? `${characterLabel}. Activate to wave.` : characterLabel}
+      data-speaking={gesturesEnabled && speech !== null}
+      aria-label={gesturesEnabled ? `${characterLabel}. Say hello and jump.` : characterLabel}
       disabled={!gesturesEnabled}
-      onClick={() => { if (gesturesEnabled && gesture === 'idle') setGesture(running ? 'wave' : 'activation') }}
+      onClick={() => { saySomething(); performGesture('activation') }}
     >
       <span className="dino-shadow" aria-hidden="true" />
-      <span className="dino-hello" aria-hidden="true">HI!</span>
+      {gesturesEnabled && speech && <span className="dino-hello" key={speech.id} aria-hidden="true">{speech.line}</span>}
       <span className="dino-gesture-frame"><svg className="dino-sprite" viewBox="0 0 44 34" shapeRendering="crispEdges" aria-hidden="true">
         <g className="dino-tail">
           <path fill="#203a31" d="M1 15h2v5h3v3h4v1h8v7h-7v-1H7v-2H4v-3H2v-4H1Z" />

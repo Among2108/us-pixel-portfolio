@@ -487,13 +487,14 @@
 .game-screen .frame-width { width: min(1240px, calc(100% - clamp(20px, 7vw, 100px))); }
 .game-screen .masthead { position: relative; z-index: 12; background: var(--cream); color: var(--green); padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
 .game-screen .masthead-inner {
-  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: 18px;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 18px;
   height: auto; min-height: clamp(55px, 7.4svh, 69px); padding-block: 5px;
 }
 .masthead .brand { justify-self: start; }
+.masthead .site-nav { justify-self: center; }
 .journey-controls {
   --control-size: 40px;
-  justify-self: end; display: grid; grid-template-columns: var(--control-size) var(--control-size) 80px var(--control-size); gap: 4px;
+  justify-self: end; display: grid; grid-template-columns: var(--control-size) var(--control-size) 80px var(--control-size) var(--control-size); gap: 4px;
 }
 .journey-control {
   height: var(--control-size); width: 100%; display: inline-flex; gap: 6px; align-items: center; justify-content: center;
@@ -507,6 +508,9 @@
 .journey-control:active:not(:disabled) { translate: 0 1px; box-shadow: 0 1px 0 #789481; }
 .journey-control.auto-play:hover:not(:disabled) { background: #365c48; }
 .journey-control:disabled { opacity: .5; }
+.sound-toggle[aria-pressed="true"] { background: var(--mint); border-color: var(--green); }
+.sound-toggle[data-audio-state="starting"] { background: #e0ebda; }
+.sound-feedback { margin: 0; padding: 5px 12px 8px; text-align: center; font: 600 13px/1.4 var(--sans); }
 .game-screen .game-shell {
   position: relative; display: grid; grid-template-rows: auto minmax(0, 1fr);
   flex: 1; gap: clamp(5px, 1.1svh, 12px); min-height: 0; padding-block: 12px var(--character-lane); pointer-events: none;
@@ -682,6 +686,8 @@
 .speed-options legend { margin-bottom: 9px; font-weight: 800; }
 .speed-options label, .motion-setting { min-height: 42px; display: inline-flex; align-items: center; gap: 7px; }
 .speed-options input, .motion-setting input { accent-color: var(--green); }
+.sound-setting { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.sound-setting .detail-button { min-width: 94px; }
 @keyframes cloud-drift { from { translate: 0 -1px; } to { translate: 4px 4px; } }
 
 @media (max-height: 720px) {
@@ -704,7 +710,7 @@
   .game-screen.stage { --character-size: clamp(58px, 17vw, 92px); --jump-clearance: clamp(32px, 8svh, 76px); }
   .game-screen .masthead-inner { grid-template: 'brand controls' auto 'chapters chapters' auto / minmax(0, 1fr) auto; gap: 2px 6px; padding-block: 5px 2px; }
   .masthead .brand { grid-area: brand; gap: 6px; }
-  .masthead .journey-controls { grid-area: controls; --control-size: 37px; grid-template-columns: var(--control-size) var(--control-size) 66px var(--control-size); gap: 3px; }
+  .masthead .journey-controls { grid-area: controls; --control-size: 37px; grid-template-columns: var(--control-size) var(--control-size) 66px var(--control-size) var(--control-size); gap: 3px; }
   .masthead .site-nav { grid-area: chapters; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; width: 100%; padding-block: 3px 4px; }
   .masthead .site-nav .world-tab { min-height: 36px; padding: 3px 5px; gap: 5px; font-size: 12px; }
   .masthead .nav-icon { width: 21px; height: 21px; }
@@ -826,7 +832,9 @@
   .game-screen:has(.endpoint-return) .contact-card .card-body { padding-block: 5px; }
 }
 @media (max-width: 380px) {
-  .masthead .journey-controls { --control-size: 34px; grid-template-columns: var(--control-size) var(--control-size) 55px var(--control-size); }
+  .masthead .journey-controls { --control-size: 34px; grid-template-columns: repeat(5, var(--control-size)); }
+  .masthead .auto-play > span { display: none; }
+  .masthead .brand-mark, .masthead .brand-wordmark small { display: none; }
   .journey-control { font-size: 11px; gap: 3px; }
   .game-screen .stage-hud { gap: 3px; }
 }

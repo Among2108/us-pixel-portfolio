@@ -140,7 +140,7 @@ function prefersReducedMotion() {
 }
 
 function isTourExemptControl(target: EventTarget | null) {
-  return target instanceof Element && Boolean(target.closest('[data-auto-play], [data-auto-gesture]'))
+  return target instanceof Element && Boolean(target.closest('[data-auto-play], [data-auto-gesture], [data-audio-toggle]'))
 }
 
 function usesOwnArrowKeys(target: EventTarget | null) {
