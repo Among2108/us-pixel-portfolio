@@ -261,8 +261,9 @@ export const Dino = memo(function Dino({
       onClick={() => { saySomething(); performGesture('activation') }}
     >
       <span className="dino-shadow" aria-hidden="true" />
+      <span className="dino-gesture-frame">
       {gesturesEnabled && speech && <span className="dino-hello" key={speech.id} aria-hidden="true">{speech.line}</span>}
-      <span className="dino-gesture-frame"><svg className="dino-sprite" viewBox="0 0 44 34" shapeRendering="crispEdges" aria-hidden="true">
+      <svg className="dino-sprite" viewBox="0 0 44 34" shapeRendering="crispEdges" aria-hidden="true">
         <g className="dino-tail">
           <path fill="#203a31" d="M1 15h2v5h3v3h4v1h8v7h-7v-1H7v-2H4v-3H2v-4H1Z" />
           <path fill="#36594a" d="M4 24h4v2h9v2H8v-1H5v-1H4Z" />

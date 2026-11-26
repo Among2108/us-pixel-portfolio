@@ -102,7 +102,7 @@ function mascot(initial = {}) {
     get tree() { return tree; },
     get jumps() { return jumps; },
     get timerCount() { return timers.size; },
-    get speech() { return tree.props.children.find(child => child?.props?.className === 'dino-hello'); },
+    get speech() { return tree.props.children.find(child => child?.props?.className === 'dino-gesture-frame').props.children.find(child => child?.props?.className === 'dino-hello'); },
     setProps(update) { props = { ...props, ...update }; dirty = true; render(); },
     click() { tree.props.onClick(); render(); },
     hide(value) { document.hidden = value; visibilityListeners.forEach(fn => fn()); render(); },
